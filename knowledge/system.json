@@ -1,0 +1,33 @@
+{
+  "category": "system",
+  "items": [
+    {
+      "id": "sys-001",
+      "title": "Check system resource usage",
+      "keywords": ["cpu", "memory", "disk", "monitor", "resource"],
+      "solution": "Use these commands to check system resources:\n- top or htop: View CPU and memory usage\n- df -h: Check disk usage\n- free -h: View memory usage\n- iostat: View IO statistics",
+      "commands": ["top", "htop", "df -h", "free -h", "iostat"]
+    },
+    {
+      "id": "sys-002",
+      "title": "Find large files",
+      "keywords": ["large files", "disk space", "cleanup", "find"],
+      "solution": "Find files larger than 100MB:\nfind / -type f -size +100M -exec ls -lh {} \\; 2>/dev/null\n\nOr use du to check directory sizes:\ndu -h --max-depth=1 / | sort -hr | head -20",
+      "commands": ["find / -type f -size +100M", "du -h --max-depth=1 / | sort -hr"]
+    },
+    {
+      "id": "sys-003",
+      "title": "Restart system services",
+      "keywords": ["restart", "service", "systemctl", "daemon"],
+      "solution": "Restart system services:\n- systemctl restart <service>\n- service <service> restart\n\nCheck service status:\n- systemctl status <service>",
+      "commands": ["systemctl restart nginx", "systemctl status nginx", "service nginx restart"]
+    },
+    {
+      "id": "sys-004",
+      "title": "View system logs",
+      "keywords": ["log", "syslog", "journalctl", "tail"],
+      "solution": "View logs:\n- tail -f /var/log/syslog: Real-time log viewing\n- tail -n 100 <file>: View last 100 lines\n- journalctl -u <service>: View systemd service logs\n- grep 'error' <file>: Search for errors",
+      "commands": ["tail -f /var/log/syslog", "journalctl -u nginx", "journalctl -xe"]
+    }
+  ]
+}

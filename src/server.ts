@@ -8,6 +8,7 @@ import { SessionManager } from './session-manager';
 import { AutoExecuteStream } from './auto-execute-stream';
 import { MarketplaceManager } from './marketplace-manager';
 import { SearchService } from './search-service';
+import { KnowledgeManager } from './knowledge-manager';
 import { ServerConfig, CommandScript, Like, Statistics, Favorite, Rating } from './types';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -41,6 +42,11 @@ const scriptExecutor = new ScriptExecutor(connectionManager, claudeAssistant);
 
 const sessionManager = new SessionManager(dataDir);
 const marketplaceManager = new MarketplaceManager(dataDir);
+const knowledgeManager = new KnowledgeManager(
+  process.env.REPO_DIR || '.',
+  process.env.GITHUB_TOKEN,
+  process.env.GITHUB_REPO
+);
 
 const serversFile = path.join(dataDir, 'servers.json');
 const scriptsFile = path.join(dataDir, 'scripts.json');
@@ -1868,6 +1874,82 @@ async function executeSmartAction(action: any, executor: any, state: any): Promi
     return { success: false, output: null, error: (error as Error).message };
   }
 }
+
+// ============ Knowledge Base API ============
+
+// Get all knowledge items
+app.get('/api/knowledge', (req, res) => {
+  try {
+    const items = knowledgeManager.getAllItems();
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Search knowledge base
+app.get('/api/knowledge/search', (req, res) => {
+  try {
+    const query = req.query.q as string;
+    if (!query) {
+      return res.status(400).json({ error: 'Query required' });
+    }
+    const results = knowledgeManager.search(query);
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Get knowledge index
+app.get('/api/knowledge/index', (req, res) => {
+  try {
+    const index = knowledgeManager.getIndex();
+    res.json(index);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Get category items
+app.get('/api/knowledge/category/:id', (req, res) => {
+  try {
+    const items = knowledgeManager.getCategoryItems(req.params.id);
+    res.json(items);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Add knowledge item
+app.post('/api/knowledge/:category', (req, res) => {
+  try {
+    const item = knowledgeManager.addItem(req.params.category, req.body);
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Delete knowledge item
+app.delete('/api/knowledge/:category/:id', (req, res) => {
+  try {
+    const success = knowledgeManager.deleteItem(req.params.category, req.params.id);
+    res.json({ success });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Sync to GitHub
+app.post('/api/knowledge/sync', async (req, res) => {
+  try {
+    const result = await knowledgeManager.syncToGitHub();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);

@@ -1,0 +1,19 @@
+{
+  "category": "deployment",
+  "items": [
+    {
+      "id": "deploy-001",
+      "title": "Node.js deployment",
+      "keywords": ["nodejs", "npm", "pm2", "deploy"],
+      "solution": "Deploy Node.js app:\n- npm install: Install dependencies\n- npm run build: Build project\n- pm2 start app.js: Start with PM2",
+      "commands": ["npm install", "npm run build", "pm2 start app.js"]
+    },
+    {
+      "id": "deploy-002",
+      "title": "Nginx reverse proxy",
+      "keywords": ["nginx", "proxy", "reverse proxy"],
+      "solution": "Setup Nginx reverse proxy:\n1. Edit /etc/nginx/sites-available/default\n2. Add proxy_pass directive\n3. nginx -t && systemctl reload nginx",
+      "commands": ["nginx -t", "systemctl reload nginx"]
+    }
+  ]
+}

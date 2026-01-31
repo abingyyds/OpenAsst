@@ -1,0 +1,19 @@
+{
+  "category": "security",
+  "items": [
+    {
+      "id": "sec-001",
+      "title": "Firewall management",
+      "keywords": ["firewall", "ufw", "iptables", "firewalld"],
+      "solution": "Firewall commands:\n- ufw status: Check UFW status\n- ufw allow 80: Allow port 80\n- firewall-cmd --list-all: List firewalld rules",
+      "commands": ["ufw status", "ufw allow 80", "firewall-cmd --list-all"]
+    },
+    {
+      "id": "sec-002",
+      "title": "SSL certificate setup",
+      "keywords": ["ssl", "https", "certbot", "letsencrypt"],
+      "solution": "Setup SSL with Let's Encrypt:\n- certbot --nginx: Auto-configure Nginx\n- certbot certonly: Get certificate only\n- certbot renew: Renew certificates",
+      "commands": ["certbot --nginx", "certbot certonly --standalone", "certbot renew"]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "category": "network",
+  "items": [
+    {
+      "id": "net-001",
+      "title": "Check port usage",
+      "keywords": ["port", "network", "listen", "netstat", "ss"],
+      "solution": "Check port usage:\n- netstat -tulpn | grep :PORT\n- lsof -i :PORT\n- ss -tulpn | grep :PORT",
+      "commands": ["netstat -tulpn", "lsof -i :8080", "ss -tulpn"]
+    },
+    {
+      "id": "net-002",
+      "title": "Network troubleshooting",
+      "keywords": ["ping", "traceroute", "dns", "network"],
+      "solution": "Network diagnostics:\n- ping <host>: Test connectivity\n- traceroute <host>: Trace route\n- nslookup <domain>: DNS lookup\n- curl -I <url>: HTTP headers",
+      "commands": ["ping google.com", "traceroute google.com", "nslookup google.com"]
+    }
+  ]
+}

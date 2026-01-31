@@ -1,0 +1,38 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-01-31T00:00:00Z",
+  "categories": [
+    {
+      "id": "system",
+      "name": "System Operations",
+      "description": "System administration and monitoring"
+    },
+    {
+      "id": "docker",
+      "name": "Docker",
+      "description": "Docker container management"
+    },
+    {
+      "id": "network",
+      "name": "Network",
+      "description": "Network configuration and troubleshooting"
+    },
+    {
+      "id": "security",
+      "name": "Security",
+      "description": "Security best practices"
+    },
+    {
+      "id": "deployment",
+      "name": "Deployment",
+      "description": "Application deployment"
+    }
+  ],
+  "files": [
+    "system.json",
+    "docker.json",
+    "network.json",
+    "security.json",
+    "deployment.json"
+  ]
+}

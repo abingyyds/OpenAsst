@@ -1,0 +1,26 @@
+{
+  "category": "docker",
+  "items": [
+    {
+      "id": "docker-001",
+      "title": "Docker container management",
+      "keywords": ["docker", "container", "ps", "start", "stop"],
+      "solution": "Basic Docker commands:\n- docker ps: List running containers\n- docker ps -a: List all containers\n- docker start <id>: Start container\n- docker stop <id>: Stop container",
+      "commands": ["docker ps", "docker ps -a", "docker start", "docker stop"]
+    },
+    {
+      "id": "docker-002",
+      "title": "Docker image management",
+      "keywords": ["docker", "image", "pull", "build", "remove"],
+      "solution": "Docker image commands:\n- docker images: List images\n- docker pull <image>: Pull image\n- docker rmi <image>: Remove image\n- docker build -t <name> .: Build image",
+      "commands": ["docker images", "docker pull nginx", "docker rmi nginx", "docker build -t myapp ."]
+    },
+    {
+      "id": "docker-003",
+      "title": "Docker Compose",
+      "keywords": ["docker-compose", "compose", "up", "down"],
+      "solution": "Docker Compose commands:\n- docker-compose up -d: Start services\n- docker-compose down: Stop services\n- docker-compose logs: View logs\n- docker-compose ps: List services",
+      "commands": ["docker-compose up -d", "docker-compose down", "docker-compose logs -f"]
+    }
+  ]
+}

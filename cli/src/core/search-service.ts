@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import axios from 'axios';
 import { CommandScript } from '../types';
+import { RemoteKnowledgeService } from './remote-knowledge';
 
 interface KnowledgeBaseItem {
   id: string;
@@ -24,11 +25,13 @@ export class SearchService {
   private dataDir: string;
   private tavilyApiKey?: string;
   private serperApiKey?: string;
+  private remoteKnowledge: RemoteKnowledgeService;
 
   constructor(dataDir: string, tavilyApiKey?: string, serperApiKey?: string) {
     this.dataDir = dataDir;
     this.tavilyApiKey = tavilyApiKey;
     this.serperApiKey = serperApiKey;
+    this.remoteKnowledge = new RemoteKnowledgeService();
   }
 
   /**
@@ -120,6 +123,24 @@ export class SearchService {
   }
 
   /**
+   * Search remote knowledge base (GitHub)
+   */
+  async searchRemoteKnowledge(query: string): Promise<SearchResult[]> {
+    try {
+      const items = await this.remoteKnowledge.search(query);
+      return items.map(item => ({
+        source: 'knowledge-base' as const,
+        title: item.title,
+        content: item.solution,
+        relevance: 2,
+        commands: item.commands
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Search internet using Tavily API
    */
   private async searchWithTavily(query: string): Promise<SearchResult[]> {
@@ -203,12 +224,19 @@ export class SearchService {
   async searchAll(query: string): Promise<SearchResult[]> {
     const allResults: SearchResult[] = [];
 
+    // Search local marketplace
     const marketplaceResults = await this.searchMarketplace(query);
     allResults.push(...marketplaceResults);
 
+    // Search local knowledge base
     const kbResults = await this.searchKnowledgeBase(query);
     allResults.push(...kbResults);
 
+    // Search remote knowledge base (GitHub)
+    const remoteResults = await this.searchRemoteKnowledge(query);
+    allResults.push(...remoteResults);
+
+    // Search internet if not enough results
     if (allResults.length < 3) {
       const internetResults = await this.searchInternet(query);
       allResults.push(...internetResults);
