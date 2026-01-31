@@ -127,10 +127,27 @@ export class SearchService {
   }
 
   /**
+   * Check if API key is valid (not a placeholder)
+   */
+  private isValidApiKey(key: string | undefined): boolean {
+    if (!key) return false;
+    const placeholders = [
+      'your_tavily_api_key_here',
+      'your_serper_api_key_here',
+      'your_api_key_here',
+      'placeholder',
+      'xxx',
+      'your-api-key',
+    ];
+    return !placeholders.includes(key.toLowerCase()) && key.length > 10;
+  }
+
+  /**
    * 使用Tavily API搜索互联网
    */
   private async searchWithTavily(query: string): Promise<SearchResult[]> {
-    if (!this.tavilyApiKey) {
+    if (!this.isValidApiKey(this.tavilyApiKey)) {
+      console.log('Tavily API key not configured or invalid, skipping internet search');
       return [];
     }
 
@@ -159,7 +176,8 @@ export class SearchService {
    * 使用Serper API搜索互联网
    */
   private async searchWithSerper(query: string): Promise<SearchResult[]> {
-    if (!this.serperApiKey) {
+    if (!this.isValidApiKey(this.serperApiKey)) {
+      console.log('Serper API key not configured or invalid, skipping internet search');
       return [];
     }
 
@@ -198,11 +216,12 @@ export class SearchService {
    * 搜索互联网
    */
   async searchInternet(query: string): Promise<SearchResult[]> {
-    if (this.tavilyApiKey) {
+    if (this.isValidApiKey(this.tavilyApiKey)) {
       return await this.searchWithTavily(query);
-    } else if (this.serperApiKey) {
+    } else if (this.isValidApiKey(this.serperApiKey)) {
       return await this.searchWithSerper(query);
     }
+    console.log('No valid internet search API key configured, skipping internet search');
     return [];
   }
 
