@@ -747,28 +747,40 @@ app.get('/api/scripts/popular', async (req, res) => {
 
 app.post('/api/scripts', async (req, res) => {
   try {
+    const userId = req.body.userId || req.headers['x-user-id'] as string;
+
+    // Build insert object
+    const insertData: any = {
+      name: req.body.name,
+      description: req.body.description,
+      category: req.body.category || 'custom',
+      tags: req.body.tags || [],
+      commands: req.body.commands || [],
+      author: req.body.author,
+      is_public: req.body.isPublic ?? true,
+      like_count: 0,
+      usage_count: 0
+    };
+
+    // Only add user_id if valid UUID
+    if (userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      insertData.user_id = userId;
+    }
+
     const { data, error } = await supabase
       .from('script_templates')
-      .insert({
-        name: req.body.name,
-        description: req.body.description,
-        category: req.body.category || 'custom',
-        tags: req.body.tags || [],
-        commands: req.body.commands || [],
-        author: req.body.author,
-        user_id: req.body.userId,
-        is_public: req.body.isPublic ?? true,
-        like_count: 0,
-        usage_count: 0
-      })
+      .insert(insertData)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('创建脚本失败:', error);
+      throw error;
+    }
     res.json(data);
-  } catch (err) {
+  } catch (err: any) {
     console.error('创建脚本失败:', err);
-    res.status(500).json({ error: '创建脚本失败' });
+    res.status(500).json({ error: '创建脚本失败: ' + (err.message || err) });
   }
 });
 
