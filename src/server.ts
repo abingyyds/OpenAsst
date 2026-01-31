@@ -728,28 +728,7 @@ app.get('/api/scripts', async (req, res) => {
   }
 });
 
-// 获取单个脚本
-app.get('/api/scripts/:id', async (req, res) => {
-  try {
-    const scriptId = req.params.id;
-    const { data, error } = await supabase
-      .from('script_templates')
-      .select('*')
-      .eq('id', scriptId)
-      .single();
-
-    if (error) {
-      console.error('获取脚本失败:', error);
-      return res.status(404).json({ error: '脚本不存在' });
-    }
-    res.json(data);
-  } catch (err) {
-    console.error('获取脚本失败:', err);
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
-
-// Search scripts by keyword
+// Search scripts by keyword (must be before :id route)
 app.get('/api/scripts/search', async (req, res) => {
   try {
     const keyword = (req.query.q as string || '').toLowerCase();
@@ -768,6 +747,27 @@ app.get('/api/scripts/search', async (req, res) => {
   } catch (err) {
     console.error('搜索脚本失败:', err);
     res.json([]);
+  }
+});
+
+// 获取单个脚本
+app.get('/api/scripts/:id', async (req, res) => {
+  try {
+    const scriptId = req.params.id;
+    const { data, error } = await supabase
+      .from('script_templates')
+      .select('*')
+      .eq('id', scriptId)
+      .single();
+
+    if (error) {
+      console.error('获取脚本失败:', error);
+      return res.status(404).json({ error: '脚本不存在' });
+    }
+    res.json(data);
+  } catch (err) {
+    console.error('获取脚本失败:', err);
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
