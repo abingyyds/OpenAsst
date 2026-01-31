@@ -1166,7 +1166,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
               send
             </button>
             <button
-              onClick={handleTwoLayerExecute}
+              onClick={() => handleTwoLayerExecute()}
               className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-500 disabled:opacity-50 font-mono btn-glow"
               disabled={autoExecuting || !chatMessage.trim()}
               title="Smart execute: real-time + AI analysis"
