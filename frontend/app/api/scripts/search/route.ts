@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
 
     // Extract the first English word as the main keyword
     const englishWords = query.match(/[a-zA-Z]+/g) || []
-    const keyword = englishWords.length > 0 ? englishWords[0] : query
+    const keyword: string = englishWords.length > 0 ? englishWords[0]! : query
 
-    if (keyword.length < 2) {
+    if (!keyword || keyword.length < 2) {
       return NextResponse.json([])
     }
 
