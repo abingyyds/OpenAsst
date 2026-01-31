@@ -6,12 +6,16 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev for build)
+RUN npm ci
 
-# Copy source
-COPY dist/ ./dist/
+# Copy source code
+COPY src/ ./src/
+COPY tsconfig.json ./
 COPY knowledge/ ./knowledge/
+
+# Build TypeScript
+RUN npm run build
 
 # Create data directory
 RUN mkdir -p ./data
