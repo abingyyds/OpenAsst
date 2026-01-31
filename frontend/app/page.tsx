@@ -183,6 +183,78 @@ export default function Home() {
           </div>
         </div>
 
+        {/* CLI Documentation */}
+        <div className="mt-16 w-full max-w-4xl">
+          <h2 className="text-2xl font-bold text-white mb-6 text-center font-mono"># CLI Documentation</h2>
+
+          {/* Terminal Window */}
+          <div className="terminal-card">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-green-900/50">
+              <div className="w-3 h-3 rounded-full bg-red-500" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500" />
+              <div className="w-3 h-3 rounded-full bg-green-500" />
+              <span className="ml-4 text-green-500/70 text-sm font-mono">openasst --help</span>
+            </div>
+            <div className="p-6 font-mono text-sm space-y-4">
+              {/* Login */}
+              <div>
+                <div className="text-green-400 mb-1">
+                  <span className="text-green-600">$</span> openasst login
+                </div>
+                <div className="text-gray-500 pl-4">Login to OpenAsst platform</div>
+              </div>
+
+              {/* Connect */}
+              <div>
+                <div className="text-green-400 mb-1">
+                  <span className="text-green-600">$</span> openasst connect &lt;server-id&gt;
+                </div>
+                <div className="text-gray-500 pl-4">Connect to a remote server via SSH</div>
+              </div>
+
+              {/* Run */}
+              <div>
+                <div className="text-green-400 mb-1">
+                  <span className="text-green-600">$</span> openasst run &lt;script-name&gt;
+                </div>
+                <div className="text-gray-500 pl-4">Execute a script from marketplace</div>
+              </div>
+
+              {/* Chat */}
+              <div>
+                <div className="text-green-400 mb-1">
+                  <span className="text-green-600">$</span> openasst chat &quot;your message&quot;
+                </div>
+                <div className="text-gray-500 pl-4">Chat with AI assistant</div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <div className="text-green-400 mb-1">
+                  <span className="text-green-600">$</span> openasst status
+                </div>
+                <div className="text-gray-500 pl-4">Show connection and system status</div>
+              </div>
+
+              {/* List */}
+              <div>
+                <div className="text-green-400 mb-1">
+                  <span className="text-green-600">$</span> openasst list servers
+                </div>
+                <div className="text-gray-500 pl-4">List all configured servers</div>
+              </div>
+
+              {/* Help */}
+              <div>
+                <div className="text-green-400 mb-1">
+                  <span className="text-green-600">$</span> openasst --help
+                </div>
+                <div className="text-gray-500 pl-4">Show all available commands</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Footer */}
         <div className="mt-16 text-center">
           <p className="text-gray-600 font-mono text-sm">
