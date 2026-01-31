@@ -21,7 +21,7 @@ export default function ServersPage() {
     // Filter and sort servers
     let filtered = servers.filter(server =>
       server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      server.host.toLowerCase().includes(searchQuery.toLowerCase())
+      (server.host && server.host.toLowerCase().includes(searchQuery.toLowerCase()))
     )
 
     // Sort servers
