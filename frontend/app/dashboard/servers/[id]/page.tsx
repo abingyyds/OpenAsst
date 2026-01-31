@@ -622,12 +622,14 @@ export default function ServerDetailPage() {
       server_id: id,
       user_id: 'current-user',
       role: 'user',
-      content: `🔄 Smart Execute: ${task}`,
+      content: `🔄 Smart Execute: ${task.length > 100 ? task.substring(0, 100) + '...' : task}`,
       created_at: new Date().toISOString()
     }
     setChatMessages(prev => [...prev, userMsg])
 
-    setTerminalOutput(prev => [...prev, '', '='.repeat(60), `🔄 Two-layer Smart Execute: ${task}`, '='.repeat(60)])
+    // Truncate task display for terminal (keep full task for execution)
+    const taskDisplay = task.length > 80 ? task.substring(0, 80) + '...' : task
+    setTerminalOutput(prev => [...prev, '', '='.repeat(60), `🔄 Smart Execute: ${taskDisplay}`, '='.repeat(60)])
     setAiMessages(prev => [...prev, '📋 Layer 1: Stream execution engine starting...'])
 
     let fullExecutionResult: any = null
