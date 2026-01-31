@@ -25,6 +25,7 @@ export interface ScriptTemplate {
   author?: string
   authorId?: string
   author_id?: string | null
+  user_id?: string | null
   isOfficial?: boolean
   is_official?: boolean
   isPublic?: boolean
