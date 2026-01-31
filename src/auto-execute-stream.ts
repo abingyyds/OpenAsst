@@ -555,22 +555,13 @@ ${hasExecutedInstall ? `
 
 Return in JSON format:
 {
-  "reasoning": "Explain your analysis and reasoning",
+  "reasoning": "Brief analysis (1-2 sentences max)",
   "commands": ["command1", "command2"],
-  "expected_outcome": "Expected result",
+  "expected_outcome": "Brief expected result",
   "is_final_step": false
 }
 
-**CRITICAL RULES - READ CAREFULLY**:
-- **NEVER set is_final_step to true if the task is not actually complete**
-- **NEVER return empty commands array unless task is verified complete**
-- **If one approach fails, you MUST try a different approach in the next iteration**
-- **You are an EXECUTOR, not just an ANALYZER - execute commands to fix problems**
-
-**Strict rules for is_final_step**:
-- Set to true ONLY when: software is installed AND verified working
-- Set to false when: still need to execute install, configure, or verify commands
-- **If commands array is empty, system will auto-verify task completion**
+**IMPORTANT: Keep reasoning SHORT (1-2 sentences). Focus on commands, not explanations.**
 
 **When previous commands failed**:
 - DO NOT just analyze the failure and stop
