@@ -126,7 +126,7 @@ export default function MarketplacePage() {
         setScriptRatings(ratings)
       }
     } catch (error) {
-      console.error('加载脚本失败:', error)
+      console.error('Failed to load scripts:', error)
     } finally {
       setLoading(false)
     }
@@ -134,7 +134,7 @@ export default function MarketplacePage() {
 
   const handleLike = async (scriptId: string) => {
     if (!userId) {
-      alert('请先登录')
+      alert('Please login first')
       return
     }
 
@@ -168,17 +168,17 @@ export default function MarketplacePage() {
       setScripts(scripts.map(s =>
         s.id === scriptId ? { ...s, likeCount: script.likeCount } : s
       ))
-      console.error('点赞操作失败:', error)
+      console.error('Like operation failed:', error)
     }
   }
 
   const handleDelete = async (scriptId: string) => {
     if (!userId) {
-      alert('请先登录')
+      alert('Please login first')
       return
     }
 
-    if (!confirm('确定要删除这个脚本吗？此操作无法撤销。')) {
+    if (!confirm('Are you sure you want to delete this script? This action cannot be undone.')) {
       return
     }
 
@@ -186,16 +186,16 @@ export default function MarketplacePage() {
       await scriptApi.delete(scriptId, userId)
       // Remove from list
       setScripts(scripts.filter(s => s.id !== scriptId))
-      alert('脚本已删除')
+      alert('Script deleted')
     } catch (error) {
-      console.error('删除脚本失败:', error)
-      alert('删除失败: ' + (error as Error).message)
+      console.error('Delete script failed:', error)
+      alert('Delete failed: ' + (error as Error).message)
     }
   }
 
   const handleFavorite = async (scriptId: string) => {
     if (!userId) {
-      alert('请先登录')
+      alert('Please login first')
       return
     }
 
@@ -219,13 +219,13 @@ export default function MarketplacePage() {
     } catch (error) {
       // Revert on error
       setFavoritedScripts(favoritedScripts)
-      console.error('收藏操作失败:', error)
+      console.error('Favorite operation failed:', error)
     }
   }
 
   const handleRate = async (scriptId: string, rating: number) => {
     if (!userId) {
-      alert('请先登录')
+      alert('Please login first')
       return
     }
 
@@ -251,7 +251,7 @@ export default function MarketplacePage() {
     } catch (error) {
       // Revert on error
       setScriptRatings(scriptRatings)
-      console.error('评分操作失败:', error)
+      console.error('Rating operation failed:', error)
     }
   }
 

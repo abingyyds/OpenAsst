@@ -97,7 +97,7 @@ export default function ServerDetailPage() {
       setServer(serverData)
       setChatMessages(messages)
     } catch (error) {
-      console.error('加载服务器数据失败:', error)
+      console.error('Failed to load server data:', error)
     } finally {
       setLoading(false)
     }
@@ -108,7 +108,7 @@ export default function ServerDetailPage() {
       const data = await scriptApi.getAll()
       setScripts(data)
     } catch (error) {
-      console.error('加载脚本失败:', error)
+      console.error('Failed to load script:', error)
     }
   }
 
@@ -146,7 +146,7 @@ export default function ServerDetailPage() {
     navigator.clipboard.writeText(text).then(() => {
       alert('终端输出已复制到剪贴板')
     }).catch(err => {
-      console.error('复制失败:', err)
+      console.error('Copy failed:', err)
     })
   }
 
@@ -193,7 +193,7 @@ export default function ServerDetailPage() {
           executeCommand()
         }
       },
-      description: '执行命令'
+      description: 'Execute command'
     }
   ])
 
@@ -209,7 +209,7 @@ export default function ServerDetailPage() {
     setCommandHistory(newHistory)
     localStorage.setItem(`command-history-${id}`, JSON.stringify(newHistory))
 
-    setTerminalOutput([...terminalOutput, `$ ${cmd}`, '命令执行中...'])
+    setTerminalOutput([...terminalOutput, `$ ${cmd}`, 'Executing command...'])
 
     // 获取AI模式设置
     const aiMode = localStorage.getItem('ai_mode') || 'auto'
@@ -225,29 +225,29 @@ export default function ServerDetailPage() {
         try {
           const aiResponse = await chatApi.chatWithAI(
             id,
-            `请分析这个命令的执行结果：\n命令：${cmd}\n输出：${result.output}`,
+            `Please analyze this command execution result:\nCommand: ${cmd}\nOutput: ${result.output}`,
             language
           )
           setAiAnalysis(prev => [...prev, {command: cmd, analysis: aiResponse.response}])
         } catch (error) {
-          console.error('AI分析失败:', error)
+          console.error('AI analysis failed:', error)
         }
       }
     } catch (error) {
       const errorMsg = `错误: ${error}`
       setTerminalOutput([...terminalOutput, `$ ${cmd}`, errorMsg])
 
-      // 在失败时，auto和error模式都调用AI
+      // On failure, auto and error modes both call AI
       if (aiMode === 'auto' || aiMode === 'error') {
         try {
           const aiResponse = await chatApi.chatWithAI(
             id,
-            `这个命令执行失败了，请帮我分析原因并提供解决方案：\n命令：${cmd}\n错误：${errorMsg}`,
+            `This command failed, please analyze the cause and provide a solution:\nCommand: ${cmd}\nError: ${errorMsg}`,
             language
           )
           setAiAnalysis(prev => [...prev, {command: cmd, analysis: aiResponse.response}])
         } catch (aiError) {
-          console.error('AI分析失败:', aiError)
+          console.error('AI analysis failed:', aiError)
         }
       }
     }
@@ -336,7 +336,7 @@ export default function ServerDetailPage() {
         },
         // onError: 错误处理
         (error) => {
-          console.error('AI聊天失败:', error)
+          console.error('AI chat failed:', error)
           setChatMessages(prev =>
             prev.map(msg =>
               msg.id === aiMsgId
@@ -348,11 +348,11 @@ export default function ServerDetailPage() {
         language
       )
     } catch (error) {
-      console.error('AI聊天失败:', error)
+      console.error('AI chat failed:', error)
       setChatMessages(prev =>
         prev.map(msg =>
           msg.id === aiMsgId
-            ? { ...msg, content: '抱歉，AI助手暂时无法响应。请稍后再试。' }
+            ? { ...msg, content: 'Sorry, AI assistant is temporarily unavailable. Please try again later.' }
             : msg
         )
       )
@@ -377,13 +377,13 @@ export default function ServerDetailPage() {
       server_id: id,
       user_id: 'current-user',
       role: 'user',
-      content: `🤖 自动执行任务: ${task}`,
+      content: `🤖 Auto-executing task: ${task}`,
       created_at: new Date().toISOString()
     }
     setChatMessages(prev => [...prev, userMsg])
 
     // 在终端显示开始标记
-    setTerminalOutput(prev => [...prev, '', '='.repeat(60), `🤖 AI自动执行: ${task}`, '='.repeat(60)])
+    setTerminalOutput(prev => [...prev, '', '='.repeat(60), `🤖 AI Auto-Execute: ${task}`, '='.repeat(60)])
 
     let currentIteration = 0
     let fullResult: any = null
@@ -413,7 +413,7 @@ export default function ServerDetailPage() {
         },
         onCommandStart: (data) => {
           flushSync(() => {
-            // 显示命令，让用户知道下面的输出是哪个命令的
+            // Show command so user knows which output belongs to which command
             setTerminalOutput(prev => [...prev, '', `$ ${data.command}`])
           })
         },
@@ -424,15 +424,15 @@ export default function ServerDetailPage() {
               setTerminalOutput(prev => [...prev, data.output])
             }
 
-            // 智能分析命令和输出
+            // Smart analysis of command and output
             const analyzeCommand = (cmd: string, output: string, exitCode: number): string => {
               if (exitCode !== 0) {
-                return `✗ 命令执行失败 (退出码: ${exitCode})`
+                return `✗ Command failed (exit code: ${exitCode})`
               }
 
               const trimmedOutput = output?.trim() || ''
 
-              // which 命令 - 检查软件是否安装
+              // which command - check if software is installed
               if (cmd.includes('which ')) {
                 const software = cmd.match(/which\s+(\S+)/)?.[1]
                 if (trimmedOutput && trimmedOutput.startsWith('/')) {
@@ -442,7 +442,7 @@ export default function ServerDetailPage() {
                 }
               }
 
-              // 版本检查命令
+              // Version check command
               if (cmd.includes('--version') || cmd.includes('-v')) {
                 const versionMatch = trimmedOutput.match(/version\s+([0-9.]+)/i)
                 if (versionMatch) {
@@ -460,7 +460,7 @@ export default function ServerDetailPage() {
               // yum/apt install
               if (cmd.includes('yum install') || cmd.includes('apt install') || cmd.includes('apt-get install')) {
                 if (trimmedOutput.includes('Complete!') || trimmedOutput.includes('done')) {
-                  return `✓ 安装成功`
+                  return `✓ Installation successful`
                 }
                 return `✓ 正在安装...`
               }
@@ -475,12 +475,12 @@ export default function ServerDetailPage() {
 
               // 默认分析
               if (!trimmedOutput) {
-                return '✓ 命令执行成功，无输出'
+                return '✓ Command executed, no output'
               } else if (trimmedOutput.length > 500) {
                 const lines = trimmedOutput.split('\n').length
-                return `✓ 命令执行成功，输出 ${lines} 行 (${trimmedOutput.length} 字符)`
+                return `✓ Command executed, ${lines} lines (${trimmedOutput.length} chars)`
               } else {
-                return `✓ 命令执行成功`
+                return `✓ Command executed successfully`
               }
             }
 
@@ -513,7 +513,7 @@ export default function ServerDetailPage() {
               '='.repeat(60)
             ])
 
-            // 构建详细的执行摘要
+            // Build detailed execution summary
             const summaryLines = [
               '',
               '='.repeat(40),
@@ -522,9 +522,9 @@ export default function ServerDetailPage() {
               ''
             ]
 
-            // 添加执行历史摘要
+            // Add execution history summary
             if (data.executionHistory && data.executionHistory.length > 0) {
-              summaryLines.push('📋 执行摘要：')
+              summaryLines.push('📋 Execution Summary:')
               data.executionHistory.forEach((h: any, i: number) => {
                 summaryLines.push(``)
                 summaryLines.push(`第${i + 1}轮：`)
@@ -533,12 +533,12 @@ export default function ServerDetailPage() {
                 }
                 if (h.commands && h.commands.length > 0) {
                   summaryLines.push(``)
-                  summaryLines.push(`📝 执行的命令：`)
+                  summaryLines.push(`📝 Commands executed:`)
                   h.commands.forEach((cmd: string, idx: number) => {
                     summaryLines.push(`  ${idx + 1}. ${cmd}`)
                   })
                 }
-                // 显示命令执行结果摘要
+                // Show command execution result summary
                 if (h.commandLogs && h.commandLogs.length > 0) {
                   summaryLines.push(``)
                   summaryLines.push(`📊 执行结果：`)

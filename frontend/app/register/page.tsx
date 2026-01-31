@@ -18,12 +18,12 @@ export default function RegisterPage() {
     setError('')
 
     if (password !== confirmPassword) {
-      setError('两次输入的密码不一致')
+      setError('Passwords do not match')
       return
     }
 
     if (password.length < 6) {
-      setError('密码长度至少为6位')
+      setError('Password must be at least 6 characters')
       return
     }
 
@@ -38,7 +38,7 @@ export default function RegisterPage() {
       if (error) throw error
       router.push('/dashboard')
     } catch (err: any) {
-      setError(err.message || '注册失败，请稍后重试')
+      setError(err.message || 'Registration failed, please try again')
     } finally {
       setLoading(false)
     }
@@ -91,7 +91,7 @@ export default function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-[#0a0f0d] border border-green-900/50 rounded-lg text-green-100 font-mono focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/50 placeholder-gray-600"
-                  placeholder="至少6位"
+                  placeholder="min 6 characters"
                 />
               </div>
 
@@ -103,7 +103,7 @@ export default function RegisterPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-[#0a0f0d] border border-green-900/50 rounded-lg text-green-100 font-mono focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/50 placeholder-gray-600"
-                  placeholder="再次输入密码"
+                  placeholder="confirm your password"
                 />
               </div>
 

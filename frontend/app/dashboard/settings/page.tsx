@@ -53,7 +53,7 @@ export default function SettingsPage() {
       const parsedConfig = JSON.parse(savedConfig)
       setConfig(parsedConfig)
 
-      // 使用保存的配置获取模型列表
+      // Use saved config to fetch model list
       if (parsedConfig.anthropicApiKey) {
         fetch(`${API_BASE_URL}/api/models`, {
           headers: {
@@ -64,30 +64,27 @@ export default function SettingsPage() {
           .then(res => res.json())
           .then(data => {
             if (data.error) {
-              console.error('获取模型列表失败:', data.error)
-              // 不清空列表，保留之前的数据
+              console.error('Failed to fetch models:', data.error)
             } else {
-              console.log('获取到的模型列表:', data)
-              console.log('模型数量:', data.length)
+              console.log('Models fetched:', data)
+              console.log('Model count:', data.length)
               setModels(data)
             }
           })
           .catch(err => {
             console.error('Failed to fetch models:', err)
-            // 不清空列表，保留之前的数据
           })
       } else {
-        console.log('未配置API Key，无法获取模型列表')
+        console.log('No API Key configured')
       }
     } else {
-      console.log('未找到保存的配置')
-      // 不清空列表，保留之前的数据
+      console.log('No saved config found')
     }
   }, [])
 
   const handleFetchModels = async () => {
     if (!config.anthropicApiKey) {
-      setFetchError('请先填写 API Key')
+      setFetchError('Please enter API Key first')
       return
     }
 
@@ -109,17 +106,17 @@ export default function SettingsPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || '获取模型列表失败')
+        throw new Error(data.error || 'Failed to fetch models')
       }
 
       setModels(data.models)
 
       // Show validation status
       if (data.validated) {
-        setFetchError('✓ API密钥验证成功')
+        setFetchError('✓ API key validated')
         setTimeout(() => setFetchError(''), 3000)
       } else {
-        setFetchError('⚠️ ' + (data.message || 'API密钥未验证'))
+        setFetchError('⚠️ ' + (data.message || 'API key not validated'))
       }
     } catch (error: any) {
       setFetchError('❌ ' + error.message)
@@ -130,7 +127,7 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     localStorage.setItem('apiConfig', JSON.stringify(config))
-    // 同时保存选择的模型，供仪表盘使用
+    // Also save selected model for dashboard use
     if (config.anthropicModel) {
       localStorage.setItem('anthropic_model', config.anthropicModel)
     }
@@ -139,7 +136,7 @@ export default function SettingsPage() {
   }
 
   const handleClear = () => {
-    if (confirm('确定要清除所有API配置吗？')) {
+    if (confirm('Are you sure you want to clear all API config?')) {
       localStorage.removeItem('apiConfig')
       setConfig({})
     }

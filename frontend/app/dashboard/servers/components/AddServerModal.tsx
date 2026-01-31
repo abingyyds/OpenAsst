@@ -20,7 +20,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
     auth_type: 'password' as 'password' | 'privateKey',
     password: '',
     privateKeyPath: '',
-    saveCredentials: false, // 是否存储密码/密钥
+    saveCredentials: false, // Store password/key locally
     // Docker
     containerName: '',
     containerId: '',
@@ -39,7 +39,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
     dockerTlsCa: '',
     dockerTlsCert: '',
     dockerTlsKey: '',
-    // 远程连接配置
+    // Remote connection config
     remoteHost: '',
     remotePort: 22,
     remoteUsername: '',
@@ -56,44 +56,44 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
 
   const validateForm = (): string | null => {
     if (!formData.name.trim()) {
-      return '请输入连接名称'
+      return 'Please enter connection name'
     }
 
     if (connectionType === 'ssh') {
-      if (!formData.host.trim()) return '请输入主机地址'
-      if (!formData.port || formData.port <= 0) return '请输入有效的端口号'
-      if (!formData.username.trim()) return '请输入用户名'
+      if (!formData.host.trim()) return 'Please enter host address'
+      if (!formData.port || formData.port <= 0) return 'Please enter valid port'
+      if (!formData.username.trim()) return 'Please enter username'
       if (formData.auth_type === 'password' && !formData.password.trim()) {
-        return '请输入密码'
+        return 'Please enter password'
       }
       if (formData.auth_type === 'privateKey' && !formData.privateKeyPath.trim()) {
-        return '请输入私钥路径'
+        return 'Please enter private key path'
       }
     } else if (connectionType === 'docker') {
       if (!formData.containerName.trim() && !formData.containerId.trim()) {
-        return '请输入容器名称或容器ID'
+        return 'Please enter container name or ID'
       }
       if (formData.isRemoteDocker) {
-        if (!formData.remoteHost.trim()) return '请输入远程主机地址'
-        if (!formData.remotePort || formData.remotePort <= 0) return '请输入有效的远程端口号'
-        if (!formData.remoteUsername.trim()) return '请输入远程用户名'
+        if (!formData.remoteHost.trim()) return 'Please enter remote host address'
+        if (!formData.remotePort || formData.remotePort <= 0) return 'Please enter valid remote port'
+        if (!formData.remoteUsername.trim()) return 'Please enter remote username'
         if (formData.remoteAuthType === 'password' && !formData.remotePassword.trim()) {
-          return '请输入远程服务器密码'
+          return 'Please enter remote server password'
         }
         if (formData.remoteAuthType === 'privateKey' && !formData.remotePrivateKeyPath.trim()) {
-          return '请输入远程服务器私钥路径'
+          return 'Please enter remote server private key path'
         }
       }
     } else if (connectionType === 'docker-remote') {
-      if (!formData.dockerApiHost.trim()) return '请输入Docker API主机地址'
-      if (!formData.dockerApiPort || formData.dockerApiPort <= 0) return '请输入有效的Docker API端口号'
+      if (!formData.dockerApiHost.trim()) return 'Please enter Docker API host'
+      if (!formData.dockerApiPort || formData.dockerApiPort <= 0) return 'Please enter valid Docker API port'
       if (!formData.containerName.trim() && !formData.containerId.trim()) {
-        return '请输入容器名称或容器ID'
+        return 'Please enter container name or ID'
       }
     } else if (connectionType === 'kubernetes') {
-      if (!formData.podName.trim()) return '请输入Pod名称'
+      if (!formData.podName.trim()) return 'Please enter Pod name'
     } else if (connectionType === 'wsl') {
-      if (!formData.distributionName.trim()) return '请输入发行版名称'
+      if (!formData.distributionName.trim()) return 'Please enter distribution name'
     }
 
     return null
@@ -112,7 +112,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
     setError('')
 
     try {
-      // 构建测试配置
+      // Build test config
       const testConfig: any = {
         name: formData.name,
         connectionType
@@ -165,12 +165,12 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
       const result = await serverApi.testConnectionConfig(testConfig)
 
       if (result.success) {
-        setTestResult({ success: true, message: '连接测试成功！' })
+        setTestResult({ success: true, message: 'Connection test successful!' })
       } else {
-        setTestResult({ success: false, message: result.error || '连接测试失败' })
+        setTestResult({ success: false, message: result.error || 'Connection test failed' })
       }
     } catch (err) {
-      setTestResult({ success: false, message: '连接测试失败：' + (err as Error).message })
+      setTestResult({ success: false, message: 'Connection test failed: ' + (err as Error).message })
     } finally {
       setTestLoading(false)
     }
@@ -190,7 +190,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
     setLoading(true)
 
     try {
-      // 根据连接类型构建提交数据
+      // Build submit data based on connection type
       const submitData: any = {
         name: formData.name,
         connectionType
@@ -208,7 +208,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
           submitData.privateKeyPath = formData.privateKeyPath
         }
       } else if (connectionType === 'local') {
-        // 本地连接不需要额外配置
+        // Local connection doesn't need additional config
         // Local connection doesn't need additional configuration
       } else if (connectionType === 'docker') {
         submitData.containerName = formData.containerName
@@ -279,7 +279,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
       })
       setConnectionType('ssh')
     } catch (err) {
-      setError('添加连接失败，请检查信息后重试')
+      setError('Failed to add connection, please check and try again')
       console.error(err)
     } finally {
       setLoading(false)

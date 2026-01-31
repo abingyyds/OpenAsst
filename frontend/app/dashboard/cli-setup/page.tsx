@@ -11,11 +11,18 @@ export default function CLISetupPage() {
   const [servers, setServers] = useState<Server[]>([])
   const [selectedServerId, setSelectedServerId] = useState('')
   const [loadingServers, setLoadingServers] = useState(false)
+  const [platform, setPlatform] = useState<'unix' | 'powershell' | 'cmd'>('unix')
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
     setCopiedCommand(text)
     setTimeout(() => setCopiedCommand(null), 2000)
+  }
+
+  const installCommands = {
+    unix: 'curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash',
+    powershell: 'iwr -useb https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.ps1 | iex',
+    cmd: 'curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.bat -o install.bat && install.bat'
   }
 
   const loadServers = async () => {
@@ -61,8 +68,6 @@ Steps:
     router.push(`/dashboard/servers/${selectedServerId}`)
   }
 
-  const oneLineInstall = 'curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash'
-
   const cliCommands = [
     { cmd: 'openasst do "task description"', desc: 'Execute task with natural language' },
     { cmd: 'openasst assistant', desc: 'Interactive AI assistant' },
@@ -84,23 +89,61 @@ Steps:
       {/* One-liner Install */}
       <div className="terminal-card p-6 border-green-500/50">
         <h2 className="text-xl font-bold mb-4 text-green-400 font-mono"># Quick Install</h2>
+
+        {/* Platform Tabs */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setPlatform('unix')}
+            className={`px-4 py-2 rounded font-mono text-sm ${
+              platform === 'unix'
+                ? 'bg-green-600 text-white'
+                : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'
+            }`}
+          >
+            macOS / Linux
+          </button>
+          <button
+            onClick={() => setPlatform('powershell')}
+            className={`px-4 py-2 rounded font-mono text-sm ${
+              platform === 'powershell'
+                ? 'bg-green-600 text-white'
+                : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'
+            }`}
+          >
+            PowerShell
+          </button>
+          <button
+            onClick={() => setPlatform('cmd')}
+            className={`px-4 py-2 rounded font-mono text-sm ${
+              platform === 'cmd'
+                ? 'bg-green-600 text-white'
+                : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'
+            }`}
+          >
+            CMD
+          </button>
+        </div>
+
         <div className="bg-[#0a0f0d] rounded-lg p-4 border border-green-900/50">
           <div className="flex items-center gap-2">
             <code className="flex-1 text-[#00ff41] font-mono text-sm break-all">
-              $ {oneLineInstall}
+              {platform === 'unix' && '$ '}{platform === 'powershell' && 'PS> '}{platform === 'cmd' && 'C:\\> '}
+              {installCommands[platform]}
             </code>
             <button
-              onClick={() => copyToClipboard(oneLineInstall)}
+              onClick={() => copyToClipboard(installCommands[platform])}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 font-mono text-sm btn-glow whitespace-nowrap"
             >
-              {copiedCommand === oneLineInstall ? 'copied!' : 'copy'}
+              {copiedCommand === installCommands[platform] ? 'copied!' : 'copy'}
             </button>
-            <button
-              onClick={handleAIInstall}
-              className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-500 font-mono text-sm btn-glow whitespace-nowrap"
-            >
-              {'>'} ai_install
-            </button>
+            {platform === 'unix' && (
+              <button
+                onClick={handleAIInstall}
+                className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-500 font-mono text-sm btn-glow whitespace-nowrap"
+              >
+                {'>'} ai_install
+              </button>
+            )}
           </div>
         </div>
         <p className="text-gray-500 text-sm mt-3 font-mono">

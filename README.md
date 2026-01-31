@@ -27,10 +27,22 @@ OpenAsst is an intelligent terminal assistant that lets you manage servers and e
 
 ### CLI Installation (Recommended)
 
-**One-liner install:**
+**macOS / Linux:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.ps1 | iex
+```
+
+**Windows (CMD):**
+
+```cmd
+curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.bat -o install.bat && install.bat
 ```
 
 **Configure:**
@@ -241,7 +253,9 @@ OpenAsst/
 │   ├── lib/                # API clients
 │   └── ...
 │
-└── install.sh              # One-liner installer
+└── install.sh              # macOS/Linux installer
+├── install.ps1             # Windows PowerShell installer
+└── install.bat             # Windows CMD installer
 ```
 
 ---

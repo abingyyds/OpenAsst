@@ -67,7 +67,7 @@ export default function CreateScriptModal({ isOpen, onClose, onSuccess }: Create
         body: JSON.stringify(scriptData),
       })
 
-      if (!response.ok) throw new Error('创建脚本失败')
+      if (!response.ok) throw new Error('Failed to create script')
 
       onSuccess()
       onClose()
@@ -80,7 +80,7 @@ export default function CreateScriptModal({ isOpen, onClose, onSuccess }: Create
         documentContent: ''
       })
     } catch (err) {
-      setError('创建脚本失败，请检查信息后重试')
+      setError('Failed to create script, please check and try again')
       console.error(err)
     } finally {
       setLoading(false)

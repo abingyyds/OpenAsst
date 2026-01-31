@@ -3,8 +3,11 @@ import type { Metadata } from 'next'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 
 export const metadata: Metadata = {
-  title: 'OpenAsst - AI服务器管理平台',
-  description: 'AI驱动的服务器管理助手',
+  title: 'OpenAsst - AI-Powered Server Management',
+  description: 'AI-powered terminal assistant for natural language system operations',
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({
@@ -13,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="en">
       <body>
         <ThemeProvider>
           {children}
