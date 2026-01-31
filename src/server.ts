@@ -824,19 +824,25 @@ app.delete('/api/scripts/:id', async (req, res) => {
     const scriptId = req.params.id;
     const userId = req.headers['x-user-id'] as string;
 
-    // 先检查脚本是否存在以及用户是否有权限删除
+    console.log('删除脚本请求 - scriptId:', scriptId, 'userId:', userId);
+
+    // 先检查脚本是否存在
     const { data: script, error: fetchError } = await supabase
       .from('script_templates')
-      .select('id, user_id')
+      .select('id, user_id, author')
       .eq('id', scriptId)
       .single();
 
     if (fetchError || !script) {
+      console.log('脚本不存在:', fetchError);
       return res.status(404).json({ error: '脚本不存在' });
     }
 
-    // 检查用户权限（只有创建者可以删除）
+    console.log('脚本信息:', script);
+
+    // 检查用户权限（只有创建者可以删除，或者脚本没有user_id时允许删除）
     if (script.user_id && script.user_id !== userId) {
+      console.log('无权删除 - script.user_id:', script.user_id, 'userId:', userId);
       return res.status(403).json({ error: '无权删除此脚本' });
     }
 
@@ -845,7 +851,12 @@ app.delete('/api/scripts/:id', async (req, res) => {
       .delete()
       .eq('id', scriptId);
 
-    if (error) throw error;
+    if (error) {
+      console.log('删除失败:', error);
+      throw error;
+    }
+
+    console.log('删除成功');
     res.json({ success: true });
   } catch (error) {
     console.error('删除脚本失败:', error);
