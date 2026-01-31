@@ -90,7 +90,7 @@ IMPORTANT:
     return content.type === 'text' ? content.text : '';
   }
 
-  async planTask(task: string, systemInfo: string): Promise<{ reasoning: string; commands: string[]; is_complete?: boolean }> {
+  async planTask(task: string, systemInfo: string): Promise<{ reasoning: string; commands: any[]; is_complete?: boolean; next_steps?: string }> {
     const prompt = `You are a professional Linux system administrator. Please analyze the following task and provide an execution plan.
 
 Task: ${task}
@@ -100,21 +100,25 @@ ${systemInfo}
 
 Please analyze the task and provide:
 1. Your analysis and reasoning process
-2. List of commands to execute
+2. List of commands to execute with explanations
 3. Whether the task is complete
+4. If complete, suggest next steps for the user
 
 Return in JSON format:
 {
-  "reasoning": "Analysis and reasoning",
-  "commands": ["command1", "command2"],
-  "is_complete": false
+  "reasoning": "Brief analysis of current situation",
+  "commands": [
+    {"cmd": "actual command", "explanation": "What this command does and why"}
+  ],
+  "is_complete": false,
+  "next_steps": "If task is complete, suggest what user might want to do next"
 }
 
 Important rules:
+- Each command MUST have an explanation field
 - Commands must be complete and directly executable
 - Include sudo if needed
-- If task is complete (e.g., software already installed), set is_complete to true
-- Each command should be independent, don't use && to chain commands
+- If task is complete, set is_complete to true and provide next_steps
 - Prefer system package manager`;
 
     const response = await this.client.messages.create({

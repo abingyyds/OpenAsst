@@ -286,7 +286,8 @@ export class AutoExecuteStream {
             this.sendEvent('complete', {
               message: '任务完成',
               reasoning: plan.reasoning,
-              verification: verification.output
+              verification: verification.output,
+              next_steps: plan.next_steps || 'Task completed successfully. You may want to verify the installation or configure additional settings.'
             });
             break;
           } else {
@@ -318,17 +319,25 @@ export class AutoExecuteStream {
 
         // 执行命令
         const commandLogs = [];
-        for (const command of plan.commands) {
-          this.sendEvent('command_start', { command });
+        for (const commandItem of plan.commands) {
+          // Support both old format (string) and new format (object with cmd and explanation)
+          const command = typeof commandItem === 'string' ? commandItem : commandItem.cmd;
+          const explanation = typeof commandItem === 'object' ? commandItem.explanation : null;
+
+          this.sendEvent('command_start', {
+            command,
+            explanation: explanation || 'Executing command...'
+          });
 
           try {
             const log = await executor.execute(command);
-            commandLogs.push(log);
+            commandLogs.push({ ...log, explanation });
 
             this.sendEvent('command_output', {
               command: log.command,
               output: log.output,
-              exitCode: log.exitCode
+              exitCode: log.exitCode,
+              explanation
             });
 
             // 检测是否执行了安装命令
@@ -340,14 +349,16 @@ export class AutoExecuteStream {
               command,
               output: (error as Error).message,
               exitCode: 1,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              explanation
             };
             commandLogs.push(errorLog);
 
             this.sendEvent('command_output', {
               command: errorLog.command,
               output: errorLog.output,
-              exitCode: errorLog.exitCode
+              exitCode: errorLog.exitCode,
+              explanation
             });
           }
         }
@@ -581,13 +592,19 @@ ${hasExecutedInstall ? `
 
 Return in JSON format:
 {
-  "reasoning": "Brief analysis (1-2 sentences max)",
-  "commands": ["command1", "command2"],
+  "reasoning": "Brief analysis of current situation (1-2 sentences)",
+  "commands": [
+    {"cmd": "actual command", "explanation": "What this command does and why"}
+  ],
   "expected_outcome": "Brief expected result",
-  "is_final_step": false
+  "is_final_step": false,
+  "next_steps": "If task is complete, suggest what user might want to do next (optional)"
 }
 
-**IMPORTANT: Keep reasoning SHORT (1-2 sentences). Focus on commands, not explanations.**
+**IMPORTANT**:
+- Each command MUST have an explanation field describing what it does
+- When is_final_step is true, provide next_steps with suggestions for the user
+- Keep explanations concise but informative
 
 **When previous commands failed**:
 - DO NOT just analyze the failure and stop
