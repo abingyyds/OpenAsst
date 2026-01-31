@@ -48,112 +48,50 @@ const knowledgeManager = new KnowledgeManager(
   process.env.GITHUB_REPO
 );
 
-const serversFile = path.join(dataDir, 'servers.json');
-const scriptsFile = path.join(dataDir, 'scripts.json');
-const likesFile = path.join(dataDir, 'likes.json');
-const statisticsFile = path.join(dataDir, 'statistics.json');
-const favoritesFile = path.join(dataDir, 'favorites.json');
-const ratingsFile = path.join(dataDir, 'ratings.json');
+// All data is now stored in Supabase database
 
-function loadServers(): ServerConfig[] {
-  if (fs.existsSync(serversFile)) {
-    const servers = JSON.parse(fs.readFileSync(serversFile, 'utf-8'));
-    // 为没有 connectionType 的服务器添加默认值
-    return servers.map((server: any) => {
-      if (!server.connectionType) {
-        // 根据配置推断连接类型
-        if (server.host && server.port) {
-          server.connectionType = 'ssh';
-        } else if (server.containerName || server.containerId) {
-          server.connectionType = 'docker';
-        } else if (server.podName) {
-          server.connectionType = 'kubernetes';
-        } else if (server.distributionName) {
-          server.connectionType = 'wsl';
-        } else {
-          server.connectionType = 'local';
-        }
-      }
-      return server;
-    });
-  }
-  return [];
-}
-
-function saveServers(servers: ServerConfig[]): void {
-  fs.writeFileSync(serversFile, JSON.stringify(servers, null, 2));
-}
-
-function loadScripts(): CommandScript[] {
-  if (fs.existsSync(scriptsFile)) {
-    return JSON.parse(fs.readFileSync(scriptsFile, 'utf-8'));
-  }
-  return [];
-}
-
-function saveScripts(scripts: CommandScript[]): void {
-  fs.writeFileSync(scriptsFile, JSON.stringify(scripts, null, 2));
-}
-
-// Likes management
-function loadLikes(): Like[] {
-  if (fs.existsSync(likesFile)) {
-    return JSON.parse(fs.readFileSync(likesFile, 'utf-8'));
-  }
-  return [];
-}
-
-function saveLikes(likes: Like[]): void {
-  fs.writeFileSync(likesFile, JSON.stringify(likes, null, 2));
-}
-
-function hasUserLiked(scriptId: string, userId: string): boolean {
-  const likes = loadLikes();
-  return likes.some(like => like.scriptId === scriptId && like.userId === userId);
-}
-
-function addLike(scriptId: string, userId: string): void {
-  const likes = loadLikes();
-  const likeId = `like_${Date.now()}_${userId}`;
-  likes.push({
-    id: likeId,
-    scriptId,
-    userId,
-    createdAt: new Date().toISOString()
-  });
-  saveLikes(likes);
-
-  // Update script likeCount
-  const scripts = loadScripts();
-  const script = scripts.find(s => s.id === scriptId);
-  if (script) {
-    script.likeCount = (script.likeCount || 0) + 1;
-    saveScripts(scripts);
-  }
-}
-
-function removeLike(scriptId: string, userId: string): void {
-  const likes = loadLikes();
-  const filtered = likes.filter(like => !(like.scriptId === scriptId && like.userId === userId));
-  saveLikes(filtered);
-
-  // Update script likeCount
-  const scripts = loadScripts();
-  const script = scripts.find(s => s.id === scriptId);
-  if (script && script.likeCount && script.likeCount > 0) {
-    script.likeCount = script.likeCount - 1;
-    saveScripts(scripts);
-  }
-}
-
-// Statistics management
-function loadStatistics(): Statistics {
-  if (fs.existsSync(statisticsFile)) {
-    return JSON.parse(fs.readFileSync(statisticsFile, 'utf-8'));
-  }
+// Helper function to convert DB server to ServerConfig
+function dbToServerConfig(server: any): ServerConfig {
   return {
-    totalServers: 0,
-    totalScripts: 0,
+    id: server.id,
+    name: server.name,
+    connectionType: server.connection_type,
+    host: server.host,
+    port: server.port,
+    username: server.username,
+    authType: server.auth_type,
+    password: server.encrypted_password,
+    privateKey: server.encrypted_private_key,
+    containerName: server.container_name,
+    containerId: server.container_id,
+    podName: server.pod_name,
+    namespace: server.namespace,
+    distributionName: server.distribution_name
+  };
+}
+
+// Helper function to get server by ID from Supabase
+async function getServerById(serverId: string): Promise<ServerConfig | null> {
+  const { data, error } = await supabase
+    .from('servers')
+    .select('*')
+    .eq('id', serverId)
+    .single();
+
+  if (error || !data) return null;
+  return dbToServerConfig(data);
+}
+
+// Helper function to get statistics from database
+async function getStatistics(): Promise<Statistics> {
+  const [serversResult, scriptsResult] = await Promise.all([
+    supabase.from('servers').select('id', { count: 'exact' }),
+    supabase.from('script_templates').select('id', { count: 'exact' })
+  ]);
+
+  return {
+    totalServers: serversResult.count || 0,
+    totalScripts: scriptsResult.count || 0,
     totalExecutions: 0,
     totalAiInteractions: 0,
     currentModel: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022',
@@ -161,146 +99,24 @@ function loadStatistics(): Statistics {
   };
 }
 
-function saveStatistics(stats: Statistics): void {
-  stats.lastUpdated = new Date().toISOString();
-  fs.writeFileSync(statisticsFile, JSON.stringify(stats, null, 2));
-}
-
-function updateStatistics(updates: Partial<Statistics>): void {
-  const stats = loadStatistics();
-  Object.assign(stats, updates);
-  saveStatistics(stats);
-}
-
-function recalculateStatistics(): Statistics {
-  const servers = loadServers();
-  const scripts = loadScripts();
-  const stats = loadStatistics();
-
-  stats.totalServers = servers.length;
-  stats.totalScripts = scripts.length;
-
-  saveStatistics(stats);
-  return stats;
-}
-
-function incrementScriptUsage(scriptId: string): void {
-  const scripts = loadScripts();
-  const script = scripts.find(s => s.id === scriptId);
-  if (script) {
-    script.usageCount = (script.usageCount || 0) + 1;
-    saveScripts(scripts);
-  }
-}
-
-function sortScripts(scripts: CommandScript[], sortBy: string): CommandScript[] {
-  const sorted = [...scripts];
-  switch (sortBy) {
-    case 'likes':
-      return sorted.sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0));
-    case 'usage':
-      return sorted.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0));
-    case 'recent':
-      return sorted.sort((a, b) => {
-        const dateA = new Date(a.createdAt || 0).getTime();
-        const dateB = new Date(b.createdAt || 0).getTime();
-        return dateB - dateA;
-      });
-    default:
-      return sorted;
-  }
-}
-
-// Favorites management
-function loadFavorites(): Favorite[] {
-  if (fs.existsSync(favoritesFile)) {
-    return JSON.parse(fs.readFileSync(favoritesFile, 'utf-8'));
-  }
-  return [];
-}
-
-function saveFavorites(favorites: Favorite[]): void {
-  fs.writeFileSync(favoritesFile, JSON.stringify(favorites, null, 2));
-}
-
-function addFavorite(scriptId: string, userId: string): void {
-  const favorites = loadFavorites();
-  const favoriteId = `fav_${Date.now()}_${userId}`;
-  favorites.push({
-    id: favoriteId,
-    scriptId,
-    userId,
-    createdAt: new Date().toISOString()
-  });
-  saveFavorites(favorites);
-}
-
-function removeFavorite(scriptId: string, userId: string): void {
-  const favorites = loadFavorites();
-  const filtered = favorites.filter(fav => !(fav.scriptId === scriptId && fav.userId === userId));
-  saveFavorites(filtered);
-}
-
-function getUserFavorites(userId: string): string[] {
-  const favorites = loadFavorites();
-  return favorites.filter(fav => fav.userId === userId).map(fav => fav.scriptId);
-}
-
-// Ratings management
-function loadRatings(): Rating[] {
-  if (fs.existsSync(ratingsFile)) {
-    return JSON.parse(fs.readFileSync(ratingsFile, 'utf-8'));
-  }
-  return [];
-}
-
-function saveRatings(ratings: Rating[]): void {
-  fs.writeFileSync(ratingsFile, JSON.stringify(ratings, null, 2));
-}
-
-function addOrUpdateRating(scriptId: string, userId: string, rating: number): void {
-  const ratings = loadRatings();
-  const existingIndex = ratings.findIndex(r => r.scriptId === scriptId && r.userId === userId);
-
-  if (existingIndex >= 0) {
-    // Update existing rating
-    ratings[existingIndex].rating = rating;
-    ratings[existingIndex].createdAt = new Date().toISOString();
-  } else {
-    // Add new rating
-    const ratingId = `rating_${Date.now()}_${userId}`;
-    ratings.push({
-      id: ratingId,
-      scriptId,
-      userId,
-      rating,
-      createdAt: new Date().toISOString()
-    });
-  }
-  saveRatings(ratings);
-}
-
-function getUserRating(scriptId: string, userId: string): number | null {
-  const ratings = loadRatings();
-  const userRating = ratings.find(r => r.scriptId === scriptId && r.userId === userId);
-  return userRating ? userRating.rating : null;
-}
-
-function getScriptAverageRating(scriptId: string): { average: number; count: number } {
-  const ratings = loadRatings();
-  const scriptRatings = ratings.filter(r => r.scriptId === scriptId);
-
-  if (scriptRatings.length === 0) {
-    return { average: 0, count: 0 };
-  }
-
-  const sum = scriptRatings.reduce((acc, r) => acc + r.rating, 0);
-  const average = sum / scriptRatings.length;
-
-  return { average: Math.round(average * 10) / 10, count: scriptRatings.length };
-}
-
 // API Routes
+
+// Check if server has default API configured
+app.get('/api/config/status', (req, res) => {
+  const hasDefaultApi = !!process.env.ANTHROPIC_API_KEY;
+  const defaultModel = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
+  const defaultBaseUrl = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com';
+
+  res.json({
+    hasDefaultApi,
+    defaultModel: hasDefaultApi ? defaultModel : null,
+    defaultBaseUrl: hasDefaultApi ? defaultBaseUrl : null,
+    message: hasDefaultApi
+      ? 'Server has default API configured. You can use AI features without your own API key.'
+      : 'No default API configured. Please provide your own API key in settings.'
+  });
+});
+
 // Get available Claude models (with optional API key validation)
 app.post('/api/models/fetch', async (req, res) => {
   try {
@@ -493,47 +309,103 @@ app.get('/api/models', async (req, res) => {
   }
 });
 
-app.get('/api/servers', (req, res) => {
-  const servers = loadServers();
-  res.json(servers);
+// Servers API - using Supabase
+app.get('/api/servers', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    let query = supabase.from('servers').select('*');
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error('获取服务器失败:', err);
+    res.json([]);
+  }
 });
 
-app.post('/api/servers', (req, res) => {
-  const servers = loadServers();
-  const newServer: ServerConfig = {
-    id: Date.now().toString(),
-    ...req.body,
-  };
-  servers.push(newServer);
-  saveServers(servers);
+app.post('/api/servers', async (req, res) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    const { data, error } = await supabase
+      .from('servers')
+      .insert({
+        user_id: userId || null,
+        name: req.body.name,
+        connection_type: req.body.connectionType,
+        host: req.body.host,
+        port: req.body.port || 22,
+        username: req.body.username,
+        auth_type: req.body.authType,
+        encrypted_password: req.body.password,
+        encrypted_private_key: req.body.privateKey,
+        container_name: req.body.containerName,
+        container_id: req.body.containerId,
+        pod_name: req.body.podName,
+        namespace: req.body.namespace,
+        distribution_name: req.body.distributionName,
+        local_only: req.body.localOnly || false
+      })
+      .select()
+      .single();
 
-  // Update statistics
-  updateStatistics({ totalServers: servers.length });
-
-  res.json(newServer);
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error('创建服务器失败:', err);
+    res.status(500).json({ error: '创建服务器失败' });
+  }
 });
 
-app.delete('/api/servers/:id', (req, res) => {
-  const servers = loadServers();
-  const filtered = servers.filter(s => s.id !== req.params.id);
-  saveServers(filtered);
-  connectionManager.disconnect(req.params.id);
+app.delete('/api/servers/:id', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('servers')
+      .delete()
+      .eq('id', req.params.id);
 
-  // Update statistics
-  updateStatistics({ totalServers: filtered.length });
-
-  res.json({ success: true });
+    if (error) throw error;
+    connectionManager.disconnect(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('删除服务器失败:', err);
+    res.status(500).json({ error: '删除服务器失败' });
+  }
 });
 
 app.post('/api/servers/:id/connect', async (req, res) => {
   try {
-    const servers = loadServers();
-    const server = servers.find(s => s.id === req.params.id);
-    if (!server) {
+    const { data: server, error } = await supabase
+      .from('servers')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !server) {
       return res.status(404).json({ error: 'Server not found' });
     }
-    // 测试连接 - 获取执行器会验证配置
-    await connectionManager.getExecutor(server);
+
+    // Convert DB format to ServerConfig
+    const serverConfig: ServerConfig = {
+      id: server.id,
+      name: server.name,
+      connectionType: server.connection_type,
+      host: server.host,
+      port: server.port,
+      username: server.username,
+      authType: server.auth_type,
+      password: server.encrypted_password,
+      privateKey: server.encrypted_private_key,
+      containerName: server.container_name,
+      containerId: server.container_id,
+      podName: server.pod_name,
+      namespace: server.namespace,
+      distributionName: server.distribution_name
+    };
+
+    await connectionManager.getExecutor(serverConfig);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
@@ -645,8 +517,7 @@ app.post('/api/servers/:id/execute', async (req, res) => {
     const { command } = req.body;
     const serverId = req.params.id;
 
-    const servers = loadServers();
-    const server = servers.find(s => s.id === serverId);
+    const server = await getServerById(serverId);
     if (!server) {
       return res.status(404).json({ error: 'Server not found' });
     }
@@ -728,9 +599,13 @@ app.get('/api/models', (req, res) => {
 });
 
 // Statistics endpoint
-app.get('/api/statistics', (req, res) => {
-  const stats = recalculateStatistics();
-  res.json(stats);
+app.get('/api/statistics', async (req, res) => {
+  try {
+    const stats = await getStatistics();
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.post('/api/models/test', async (req, res) => {
@@ -981,7 +856,7 @@ app.get('/api/scripts/:id/likes', async (req, res) => {
 });
 
 // Favorite endpoints
-app.post('/api/scripts/:id/favorite', (req, res) => {
+app.post('/api/scripts/:id/favorite', async (req, res) => {
   try {
     const scriptId = req.params.id;
     const userId = req.headers['x-user-id'] as string;
@@ -990,14 +865,14 @@ app.post('/api/scripts/:id/favorite', (req, res) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    addFavorite(scriptId, userId);
+    await supabase.from('script_favorites').insert({ script_id: scriptId, user_id: userId });
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
-app.delete('/api/scripts/:id/favorite', (req, res) => {
+app.delete('/api/scripts/:id/favorite', async (req, res) => {
   try {
     const scriptId = req.params.id;
     const userId = req.headers['x-user-id'] as string;
@@ -1006,14 +881,18 @@ app.delete('/api/scripts/:id/favorite', (req, res) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    removeFavorite(scriptId, userId);
+    await supabase
+      .from('script_favorites')
+      .delete()
+      .eq('script_id', scriptId)
+      .eq('user_id', userId);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
-app.get('/api/favorites', (req, res) => {
+app.get('/api/favorites', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'] as string;
 
@@ -1021,18 +900,31 @@ app.get('/api/favorites', (req, res) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    const favoriteIds = getUserFavorites(userId);
-    const scripts = loadScripts();
-    const favoriteScripts = scripts.filter(s => favoriteIds.includes(s.id));
+    // Get favorite script IDs
+    const { data: favorites } = await supabase
+      .from('script_favorites')
+      .select('script_id')
+      .eq('user_id', userId);
 
-    res.json(favoriteScripts);
+    if (!favorites || favorites.length === 0) {
+      return res.json([]);
+    }
+
+    // Get the scripts
+    const scriptIds = favorites.map(f => f.script_id);
+    const { data: scripts } = await supabase
+      .from('script_templates')
+      .select('*')
+      .in('id', scriptIds);
+
+    res.json(scripts || []);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
 // Rating endpoints
-app.post('/api/scripts/:id/rate', (req, res) => {
+app.post('/api/scripts/:id/rate', async (req, res) => {
   try {
     const scriptId = req.params.id;
     const userId = req.headers['x-user-id'] as string;
@@ -1046,33 +938,46 @@ app.post('/api/scripts/:id/rate', (req, res) => {
       return res.status(400).json({ error: 'Rating must be between 1 and 5' });
     }
 
-    addOrUpdateRating(scriptId, userId, rating);
-    const ratingInfo = getScriptAverageRating(scriptId);
+    // Upsert rating
+    await supabase
+      .from('script_ratings')
+      .upsert({ script_id: scriptId, user_id: userId, rating }, { onConflict: 'script_id,user_id' });
 
-    res.json({
-      success: true,
-      average: ratingInfo.average,
-      count: ratingInfo.count,
-      userRating: rating
-    });
+    // Get average rating
+    const { data: ratings } = await supabase
+      .from('script_ratings')
+      .select('rating')
+      .eq('script_id', scriptId);
+
+    const count = ratings?.length || 0;
+    const sum = ratings?.reduce((acc, r) => acc + r.rating, 0) || 0;
+    const average = count > 0 ? Math.round((sum / count) * 10) / 10 : 0;
+
+    res.json({ success: true, average, count, userRating: rating });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
-app.get('/api/scripts/:id/rating', (req, res) => {
+app.get('/api/scripts/:id/rating', async (req, res) => {
   try {
     const scriptId = req.params.id;
     const userId = req.headers['x-user-id'] as string;
 
-    const ratingInfo = getScriptAverageRating(scriptId);
-    const userRating = userId ? getUserRating(scriptId, userId) : null;
+    // Get all ratings for this script
+    const { data: ratings } = await supabase
+      .from('script_ratings')
+      .select('rating, user_id')
+      .eq('script_id', scriptId);
 
-    res.json({
-      average: ratingInfo.average,
-      count: ratingInfo.count,
-      userRating
-    });
+    const count = ratings?.length || 0;
+    const sum = ratings?.reduce((acc, r) => acc + r.rating, 0) || 0;
+    const average = count > 0 ? Math.round((sum / count) * 10) / 10 : 0;
+
+    // Get user's rating
+    const userRating = userId ? ratings?.find(r => r.user_id === userId)?.rating || null : null;
+
+    res.json({ average, count, userRating });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
@@ -1081,10 +986,15 @@ app.get('/api/scripts/:id/rating', (req, res) => {
 app.post('/api/scripts/:id/execute', async (req, res) => {
   try {
     const { serverId, parameters } = req.body;
-    const scripts = loadScripts();
-    const script = scripts.find(s => s.id === req.params.id);
 
-    if (!script) {
+    // Get script from Supabase
+    const { data: script, error: scriptError } = await supabase
+      .from('script_templates')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (scriptError || !script) {
       return res.status(404).json({ error: 'Script not found' });
     }
 
@@ -1093,8 +1003,7 @@ app.post('/api/scripts/:id/execute', async (req, res) => {
     }
 
     // 确保服务器已连接
-    const servers = loadServers();
-    const server = servers.find(s => s.id === serverId);
+    const server = await getServerById(serverId);
     if (!server) {
       return res.status(404).json({ error: 'Server not found' });
     }
@@ -1173,10 +1082,8 @@ Extract commands:`;
       }
     }
 
-    // Increment usage count and update statistics
-    incrementScriptUsage(req.params.id);
-    const stats = loadStatistics();
-    updateStatistics({ totalExecutions: stats.totalExecutions + 1 });
+    // Increment usage count using Supabase RPC
+    await supabase.rpc('increment_usage_count', { script_id: req.params.id });
 
     const success = logs.every(log => log.exitCode === 0);
     res.json({ success, logs });
@@ -1229,8 +1136,7 @@ app.post('/api/sessions/:serverId/auto-execute', async (req, res) => {
       : claudeAssistant;
 
     // 确保服务器已连接
-    const servers = loadServers();
-    const server = servers.find(s => s.id === serverId);
+    const server = await getServerById(serverId);
     if (!server) {
       return res.status(404).json({ error: 'Server not found' });
     }
@@ -1434,8 +1340,7 @@ app.post('/api/sessions/:serverId/auto-execute/stream', async (req, res) => {
       : claudeAssistant;
 
     // 确保服务器已连接
-    const servers = loadServers();
-    const server = servers.find(s => s.id === serverId);
+    const server = await getServerById(serverId);
     if (!server) {
       return res.status(404).json({ error: 'Server not found' });
     }
@@ -1700,8 +1605,7 @@ app.post('/api/cli/execute-task', async (req, res) => {
     }
 
     // 获取服务器配置
-    const servers = loadServers();
-    const server = servers.find(s => s.id === serverId);
+    const server = await getServerById(serverId);
     if (!server) {
       return res.status(404).json({ error: 'Server not found' });
     }

@@ -20,6 +20,13 @@ interface Model {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
+interface ServerApiStatus {
+  hasDefaultApi: boolean
+  defaultModel: string | null
+  defaultBaseUrl: string | null
+  message: string
+}
+
 export default function SettingsPage() {
   const router = useRouter()
   const { language, setLanguage } = useLanguage()
@@ -28,8 +35,19 @@ export default function SettingsPage() {
   const [models, setModels] = useState<Model[]>([])
   const [fetchingModels, setFetchingModels] = useState(false)
   const [fetchError, setFetchError] = useState('')
+  const [serverStatus, setServerStatus] = useState<ServerApiStatus | null>(null)
 
   useEffect(() => {
+    // Fetch server API status
+    fetch(`${API_BASE_URL}/api/config/status`)
+      .then(res => res.json())
+      .then(data => {
+        setServerStatus(data)
+      })
+      .catch(err => {
+        console.error('Failed to fetch server status:', err)
+      })
+
     const savedConfig = localStorage.getItem('apiConfig')
     if (savedConfig) {
       const parsedConfig = JSON.parse(savedConfig)
@@ -146,6 +164,24 @@ export default function SettingsPage() {
       )}
 
       <div className="terminal-card p-6 space-y-6">
+        {/* Server API Status */}
+        {serverStatus && (
+          <div className={`p-4 rounded border ${serverStatus.hasDefaultApi ? 'bg-green-900/20 border-green-500/50' : 'bg-yellow-900/20 border-yellow-500/50'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`w-2 h-2 rounded-full ${serverStatus.hasDefaultApi ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
+              <span className={`font-mono text-sm ${serverStatus.hasDefaultApi ? 'text-green-400' : 'text-yellow-400'}`}>
+                {serverStatus.hasDefaultApi ? '[SERVER API READY]' : '[NO SERVER API]'}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 font-mono">{serverStatus.message}</p>
+            {serverStatus.hasDefaultApi && (
+              <p className="text-xs text-gray-500 font-mono mt-1">
+                default_model: {serverStatus.defaultModel}
+              </p>
+            )}
+          </div>
+        )}
+
         <div>
           <h2 className="text-xl font-semibold mb-4 text-green-400 font-mono"># Anthropic API</h2>
           <div className="space-y-4">
