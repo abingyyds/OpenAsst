@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
+
 interface CreateScriptModalProps {
   isOpen: boolean
   onClose: () => void
@@ -59,7 +61,7 @@ export default function CreateScriptModal({ isOpen, onClose, onSuccess }: Create
         commands: []
       }
 
-      const response = await fetch('http://localhost:3002/api/scripts', {
+      const response = await fetch(`${API_BASE_URL}/api/scripts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
