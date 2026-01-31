@@ -44,11 +44,12 @@ export default function UseScriptModal({ script, isOpen, onClose }: UseScriptMod
     }
 
     // Store full script data in sessionStorage for the server page to pick up
+    // Support both camelCase and snake_case field names
     sessionStorage.setItem('pendingScript', JSON.stringify({
       id: script!.id,
       name: script!.name,
       description: script!.description,
-      documentContent: (script as any).documentContent,
+      documentContent: (script as any).documentContent || (script as any).document_content,
       commands: script!.commands
     }))
 

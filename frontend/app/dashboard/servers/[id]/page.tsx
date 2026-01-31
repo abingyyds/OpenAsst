@@ -265,8 +265,11 @@ export default function ServerDetailPage() {
     // Build task description from script
     let taskDescription = `Execute script: ${script.name}\n\n`
 
-    if (script.documentContent) {
-      taskDescription += `Follow this guide:\n${script.documentContent}`
+    // Support both camelCase and snake_case field names
+    const docContent = script.documentContent || script.document_content
+
+    if (docContent) {
+      taskDescription += `Follow this guide:\n${docContent}`
     } else if (script.commands && script.commands.length > 0) {
       const cmds = script.commands.map((c: any) =>
         typeof c === 'string' ? c : c.command
