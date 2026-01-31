@@ -37,6 +37,8 @@ export interface ScriptTemplate {
   created_at?: string
   updatedAt?: string
   updated_at?: string
+  documentContent?: string
+  documentType?: 'markdown' | 'plain_text'
 }
 
 export const scriptApi = {
