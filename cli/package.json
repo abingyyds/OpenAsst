@@ -1,0 +1,38 @@
+{
+  "name": "openasst-cli",
+  "version": "1.0.0",
+  "description": "OpenAsst CLI - AI-powered terminal assistant",
+  "main": "dist/index.js",
+  "bin": {
+    "openasst": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "cli",
+    "ai",
+    "assistant",
+    "terminal",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.20.0",
+    "chalk": "^4.1.2",
+    "commander": "^11.0.0",
+    "dotenv": "^16.0.3",
+    "inquirer": "^8.2.5",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.9",
+    "@types/node": "^20.19.30",
+    "@types/ora": "^3.1.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0"
+  }
+}

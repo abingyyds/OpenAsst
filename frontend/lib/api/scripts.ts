@@ -1,0 +1,191 @@
+import { supabase } from '../supabase'
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
+
+export interface ScriptExecutionResult {
+  success: boolean
+  logs: Array<{
+    command: string
+    output: string
+    exitCode: number
+    timestamp: string
+  }>
+  aiSuggestions?: string[]
+}
+
+export interface ScriptTemplate {
+  id: string
+  name: string
+  description: string
+  category: 'deployment' | 'maintenance' | 'monitoring' | 'docker' | 'security' | 'backup' | 'network' | 'custom'
+  tags: string[]
+  commands: any
+  parameters?: any
+  author?: string
+  authorId?: string
+  author_id?: string | null
+  isOfficial?: boolean
+  is_official?: boolean
+  isPublic?: boolean
+  is_public?: boolean
+  usageCount?: number
+  usage_count?: number
+  likeCount?: number
+  rating?: number
+  createdAt?: string
+  created_at?: string
+  updatedAt?: string
+  updated_at?: string
+}
+
+export const scriptApi = {
+  async getAll(sort?: string, category?: string): Promise<ScriptTemplate[]> {
+    const params = new URLSearchParams()
+    if (sort) params.append('sort', sort)
+    if (category && category !== 'all') params.append('category', category)
+
+    const response = await fetch(`${API_BASE_URL}/api/scripts?${params}`)
+    if (!response.ok) throw new Error('获取脚本列表失败')
+    return response.json()
+  },
+
+  async getById(id: string): Promise<ScriptTemplate | null> {
+    const response = await fetch(`${API_BASE_URL}/api/scripts/${id}`)
+    if (!response.ok) throw new Error('获取脚本失败')
+    return response.json()
+  },
+
+  async search(query: string, category?: string): Promise<ScriptTemplate[]> {
+    const params = new URLSearchParams()
+    if (query) params.append('q', query)
+    if (category) params.append('category', category)
+
+    const response = await fetch(`${API_BASE_URL}/api/scripts?${params}`)
+    if (!response.ok) throw new Error('搜索脚本失败')
+    return response.json()
+  },
+
+  async execute(scriptId: string, serverId: string, parameters?: Record<string, any>): Promise<ScriptExecutionResult> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 330000); // 5.5 minutes (slightly longer than backend timeout)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/scripts/${scriptId}/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ serverId, parameters }),
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || '脚本执行失败');
+      }
+
+      return response.json()
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('脚本执行超时，请检查服务器连接');
+      }
+      throw error;
+    }
+  },
+
+  async like(scriptId: string, userId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/scripts/${scriptId}/like`, {
+      method: 'POST',
+      headers: { 'X-User-Id': userId }
+    })
+    if (!response.ok) throw new Error('点赞失败')
+    return response.json()
+  },
+
+  async unlike(scriptId: string, userId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/scripts/${scriptId}/like`, {
+      method: 'DELETE',
+      headers: { 'X-User-Id': userId }
+    })
+    if (!response.ok) throw new Error('取消点赞失败')
+    return response.json()
+  },
+
+  async getLikes(scriptId: string, userId?: string) {
+    const headers: Record<string, string> = {}
+    if (userId) headers['X-User-Id'] = userId
+
+    const response = await fetch(`${API_BASE_URL}/api/scripts/${scriptId}/likes`, { headers })
+    if (!response.ok) throw new Error('获取点赞信息失败')
+    return response.json()
+  },
+
+  async getPopular(limit: number = 5): Promise<ScriptTemplate[]> {
+    const response = await fetch(`${API_BASE_URL}/api/scripts/popular?limit=${limit}`)
+    if (!response.ok) throw new Error('获取热门脚本失败')
+    return response.json()
+  },
+
+  async delete(scriptId: string, userId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/scripts/${scriptId}`, {
+      method: 'DELETE',
+      headers: { 'X-User-Id': userId }
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || '删除脚本失败')
+    }
+    return response.json()
+  },
+
+  async favorite(scriptId: string, userId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/scripts/${scriptId}/favorite`, {
+      method: 'POST',
+      headers: { 'X-User-Id': userId }
+    })
+    if (!response.ok) throw new Error('收藏失败')
+    return response.json()
+  },
+
+  async unfavorite(scriptId: string, userId: string) {
+    const response = await fetch(`${API_BASE_URL}/api/scripts/${scriptId}/favorite`, {
+      method: 'DELETE',
+      headers: { 'X-User-Id': userId }
+    })
+    if (!response.ok) throw new Error('取消收藏失败')
+    return response.json()
+  },
+
+  async getFavorites(userId: string): Promise<ScriptTemplate[]> {
+    const response = await fetch(`${API_BASE_URL}/api/favorites`, {
+      headers: { 'X-User-Id': userId }
+    })
+    if (!response.ok) throw new Error('获取收藏列表失败')
+    return response.json()
+  },
+
+  async rate(scriptId: string, userId: string, rating: number) {
+    const response = await fetch(`${API_BASE_URL}/api/scripts/${scriptId}/rate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': userId
+      },
+      body: JSON.stringify({ rating })
+    })
+    if (!response.ok) throw new Error('评分失败')
+    return response.json()
+  },
+
+  async getRating(scriptId: string, userId?: string) {
+    const headers: Record<string, string> = {}
+    if (userId) headers['X-User-Id'] = userId
+
+    const response = await fetch(`${API_BASE_URL}/api/scripts/${scriptId}/rating`, { headers })
+    if (!response.ok) throw new Error('获取评分信息失败')
+    return response.json()
+  }
+}
