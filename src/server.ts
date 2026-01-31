@@ -817,6 +817,12 @@ app.post('/api/scripts/:id/like', async (req, res) => {
       return res.status(400).json({ error: 'Already liked' });
     }
 
+    // 验证 visitorId 是否为有效 UUID
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(visitorId);
+    if (!isValidUUID) {
+      return res.status(400).json({ error: 'Invalid user ID format' });
+    }
+
     // 添加点赞
     await supabase.from('script_likes').insert({ script_id: scriptId, user_id: visitorId });
 
@@ -886,6 +892,12 @@ app.post('/api/scripts/:id/favorite', async (req, res) => {
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    // 验证 userId 是否为有效 UUID
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    if (!isValidUUID) {
+      return res.status(400).json({ error: 'Invalid user ID format' });
     }
 
     await supabase.from('script_favorites').insert({ script_id: scriptId, user_id: userId });
@@ -959,6 +971,12 @@ app.post('/api/scripts/:id/rate', async (req, res) => {
 
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+
+    // 验证 userId 是否为有效 UUID
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    if (!isValidUUID) {
+      return res.status(400).json({ error: 'Invalid user ID format' });
     }
 
     // Upsert rating
