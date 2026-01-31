@@ -266,4 +266,33 @@ Provide a brief explanation of:
     const content = message.content[0];
     return content.type === 'text' ? content.text : '';
   }
+
+  /**
+   * 使用扩展思考进行深度分析
+   */
+  async chatWithThinking(
+    userMessage: string,
+    maxTokens: number = 4096
+  ): Promise<string> {
+    try {
+      // 检查是否支持扩展思考的模型
+      const thinkingModels = ['claude-3-5-sonnet', 'claude-3-opus', 'claude-sonnet-4'];
+      const supportsThinking = thinkingModels.some(m => this.model.includes(m));
+
+      const response = await this.client.messages.create({
+        model: this.model,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: userMessage }],
+        // 如果模型支持，启用更长的输出
+        ...(supportsThinking ? { temperature: 0.7 } : {})
+      });
+
+      const content = response.content[0];
+      return content.type === 'text' ? content.text : '';
+    } catch (error: any) {
+      console.error('Extended thinking failed:', error);
+      // 降级到普通聊天
+      return this.chat(userMessage, [], []);
+    }
+  }
 }

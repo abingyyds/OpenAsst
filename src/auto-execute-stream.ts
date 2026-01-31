@@ -156,13 +156,20 @@ export class AutoExecuteStream {
   }
 
   async execute(serverConfig: ServerConfig, task: string, systemInfo: any, language?: string) {
-    const MAX_ITERATIONS = 15;
+    const MAX_ITERATIONS = 20;  // 增加最大迭代次数
     const executionHistory: any[] = [];
     let currentIteration = 0;
     let taskCompleted = false;
     let hasExecutedInstall = false;
 
-    this.sendEvent('start', { task, message: 'Starting auto-execution...' });
+    // 追踪失败的方法，避免重复尝试
+    const failedApproaches: string[] = [];
+    // 缓存搜索结果
+    let cachedScripts: any[] = [];
+    let cachedKnowledge: any[] = [];
+    let cachedInternet: any[] = [];
+
+    this.sendEvent('start', { task, message: 'Starting intelligent execution...' });
 
     try {
       // 获取执行器
@@ -182,70 +189,100 @@ export class AutoExecuteStream {
             ).join('\n\n')}`
           : '';
 
-        // 第一轮就查询所有知识来源
-        let relatedScripts: any[] = [];
-        let internetSearchResults: any[] = [];
-        let knowledgeBaseResults: any[] = [];
+        // 提取搜索关键词
+        let searchQuery = task
+          .replace(/^Execute script:\s*/i, '')
+          .replace(/^执行脚本:\s*/i, '')
+          .replace(/安装教程|安装指南|installation guide/gi, '')
+          .replace(/安装|install|部署|deploy/gi, '')
+          .trim();
 
-        if (currentIteration === 1) {
-          // Extract script name from task - remove common prefixes
-          let softwareName = task
-            .replace(/^Execute script:\s*/i, '')  // Remove "Execute script:" prefix
-            .replace(/^执行脚本:\s*/i, '')  // Remove Chinese prefix
-            .replace(/安装教程|安装指南|installation guide/gi, '')  // Remove tutorial suffixes
-            .replace(/安装|install|部署|deploy/gi, '')
-            .trim();
-
-          // If still has duplicates like "OpenClaw OpenClaw", take first part
-          const parts = softwareName.split(/\s+/);
-          if (parts.length > 1 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
-            softwareName = parts[0];
-          }
-
-          // Also search with original script name for better matching
-          const originalScriptName = task
-            .replace(/^Execute script:\s*/i, '')
-            .replace(/^执行脚本:\s*/i, '')
-            .split(/\s+/)[0]  // Take first word/name
-            .trim();
-
-          // 1. 优先查询命令市场 - 先用原始脚本名搜索
-          this.sendEvent('status', { message: 'Searching marketplace...' });
-          relatedScripts = await this.marketplaceManager.searchTemplates(originalScriptName);
-          // 如果没找到，用处理后的名称再搜索
-          if (relatedScripts.length === 0 && softwareName !== originalScriptName) {
-            relatedScripts = await this.marketplaceManager.searchTemplates(softwareName);
-          }
-          if (relatedScripts.length > 0) {
-            this.sendEvent('status', { message: `Found ${relatedScripts.length} scripts in marketplace` });
-          }
-
-          // 2. 查询远程知识库 - 同样先用原始名称
-          this.sendEvent('status', { message: 'Fetching knowledge base...' });
-          knowledgeBaseResults = await this.fetchKnowledgeBase(originalScriptName);
-          if (knowledgeBaseResults.length === 0 && softwareName !== originalScriptName) {
-            knowledgeBaseResults = await this.fetchKnowledgeBase(softwareName);
-          }
-          if (knowledgeBaseResults.length > 0) {
-            this.sendEvent('status', { message: `Found ${knowledgeBaseResults.length} knowledge entries` });
-          }
-
-          // 3. 始终尝试搜索互联网（如果有有效的API key）
-          if (this.searchService) {
-            this.sendEvent('status', { message: 'Searching internet...' });
-            try {
-              internetSearchResults = await this.searchService.searchInternet(task);
-              if (internetSearchResults.length > 0) {
-                this.sendEvent('status', { message: `Found ${internetSearchResults.length} results from internet` });
+        // 从错误中提取关键词进行针对性搜索
+        let errorKeywords: string[] = [];
+        if (executionHistory.length > 0) {
+          const lastExecution = executionHistory[executionHistory.length - 1];
+          const failedLogs = lastExecution.commandLogs?.filter((log: any) => log.exitCode !== 0) || [];
+          for (const log of failedLogs) {
+            // 提取错误关键词
+            const errorPatterns = [
+              /GLIBC_(\d+\.\d+)/gi,
+              /node.*version.*(\d+)/gi,
+              /npm ERR! (.+)/gi,
+              /Error: (.+)/gi,
+              /command not found: (\w+)/gi,
+              /No such file or directory: (.+)/gi,
+              /Permission denied/gi,
+            ];
+            for (const pattern of errorPatterns) {
+              const matches = log.output?.match(pattern);
+              if (matches) {
+                errorKeywords.push(...matches.slice(0, 2));
               }
-            } catch (error) {
-              console.error('Internet search failed:', error);
+            }
+            // 记录失败的命令
+            if (log.command && !failedApproaches.includes(log.command)) {
+              failedApproaches.push(log.command);
             }
           }
         }
 
-        // AI analysis
-        this.sendEvent('status', { message: 'AI analyzing task...' });
+        // 每轮都搜索知识库（第一轮完整搜索，后续轮次针对错误搜索）
+        let relatedScripts: any[] = cachedScripts;
+        let knowledgeBaseResults: any[] = cachedKnowledge;
+        let internetSearchResults: any[] = cachedInternet;
+
+        if (currentIteration === 1) {
+          // 第一轮：完整搜索
+          this.sendEvent('status', { message: '🔍 Searching knowledge sources...' });
+
+          // 搜索脚本市场
+          relatedScripts = await this.marketplaceManager.searchTemplates(searchQuery);
+          if (relatedScripts.length > 0) {
+            this.sendEvent('status', { message: `📜 Found ${relatedScripts.length} scripts` });
+          }
+          cachedScripts = relatedScripts;
+
+          // 搜索知识库
+          knowledgeBaseResults = await this.fetchKnowledgeBase(searchQuery);
+          if (knowledgeBaseResults.length > 0) {
+            this.sendEvent('status', { message: `📚 Found ${knowledgeBaseResults.length} knowledge entries` });
+          }
+          cachedKnowledge = knowledgeBaseResults;
+
+          // 搜索互联网
+          if (this.searchService) {
+            internetSearchResults = await this.searchService.searchInternet(task);
+            if (internetSearchResults.length > 0) {
+              this.sendEvent('status', { message: `🌐 Found ${internetSearchResults.length} internet results` });
+            }
+            cachedInternet = internetSearchResults;
+          }
+        } else if (errorKeywords.length > 0) {
+          // 后续轮次：针对错误搜索解决方案
+          this.sendEvent('status', { message: '🔍 Searching for error solutions...' });
+          const errorQuery = errorKeywords.join(' ');
+
+          // 搜索错误相关的知识
+          const errorKnowledge = await this.fetchKnowledgeBase(errorQuery);
+          if (errorKnowledge.length > 0) {
+            knowledgeBaseResults = [...cachedKnowledge, ...errorKnowledge];
+            this.sendEvent('status', { message: `📚 Found ${errorKnowledge.length} error solutions` });
+          }
+
+          // 搜索互联网获取错误解决方案
+          if (this.searchService && errorKeywords.length > 0) {
+            const errorInternetResults = await this.searchService.searchInternet(
+              `${searchQuery} ${errorKeywords[0]} solution fix`
+            );
+            if (errorInternetResults.length > 0) {
+              internetSearchResults = [...cachedInternet, ...errorInternetResults];
+              this.sendEvent('status', { message: `🌐 Found ${errorInternetResults.length} error solutions online` });
+            }
+          }
+        }
+
+        // AI analysis with extended thinking
+        this.sendEvent('status', { message: '🧠 AI deep thinking...' });
 
         const planPrompt = this.buildPrompt(
           task,
@@ -257,7 +294,8 @@ export class AutoExecuteStream {
           hasExecutedInstall,
           internetSearchResults,
           knowledgeBaseResults,
-          language
+          language,
+          failedApproaches
         );
         const planResponse = await this.assistant.chat(planPrompt, [], []);
 
@@ -465,7 +503,8 @@ export class AutoExecuteStream {
     hasExecutedInstall?: boolean,
     internetSearchResults?: any[],
     knowledgeBaseResults?: any[],
-    language?: string
+    language?: string,
+    failedApproaches?: string[]
   ): string {
     const isFirstIteration = iteration === 1;
 
@@ -481,15 +520,24 @@ export class AutoExecuteStream {
 
       if (failedCommands.length > 0) {
         hasErrors = true;
-        errorAnalysis = `\n\n## ⚠️ Previous iteration failed, needs fix!\n\n`;
+        errorAnalysis = `\n\n## ⚠️ Previous iteration failed!\n\n`;
         errorAnalysis += `Failed commands:\n`;
         failedCommands.forEach((log: any) => {
           errorAnalysis += `- Command: ${log.command}\n`;
-          errorAnalysis += `  Error: ${log.output}\n`;
+          errorAnalysis += `  Error: ${log.output?.substring(0, 300)}\n`;
           errorAnalysis += `  Exit code: ${log.exitCode}\n\n`;
         });
-        errorAnalysis += `**You must analyze these errors and try different approaches. Do not repeat the same failed commands!**\n`;
       }
+    }
+
+    // 添加已失败方法的上下文
+    let failedApproachesContext = '';
+    if (failedApproaches && failedApproaches.length > 0) {
+      failedApproachesContext = `\n\n## 🚫 Already Failed Approaches (DO NOT REPEAT!):\n`;
+      failedApproaches.slice(-10).forEach((cmd, i) => {
+        failedApproachesContext += `${i + 1}. \`${cmd}\`\n`;
+      });
+      failedApproachesContext += `\n**You MUST try a COMPLETELY DIFFERENT approach!**\n`;
     }
 
     // Build script library context
@@ -567,16 +615,16 @@ export class AutoExecuteStream {
     };
     const langInstruction = language ? languageInstructions[language] || '' : '';
 
-    return `You are a Linux system administration expert. ${langInstruction}
+    return `You are a Linux system administration expert with deep thinking capabilities. ${langInstruction}
 
-User needs to complete the following task:
+## 🎯 Task
+${task}
 
-Task: ${task}
-
-System Info:
+## 💻 System Info
 ${systemInfo.output}
 ${historyContext}
 ${errorAnalysis}
+${failedApproachesContext}
 ${scriptContext}
 ${knowledgeContext}
 ${internetContext}
@@ -651,32 +699,28 @@ ${hasExecutedInstall ? `
 
 Return in JSON format:
 {
-  "reasoning": "Brief analysis of current situation (1-2 sentences)",
+  "thinking": "Deep analysis: 1) What is the current state? 2) What went wrong before? 3) What NEW approach should I try?",
+  "reasoning": "Brief summary for user (1-2 sentences)",
   "commands": [
-    {"cmd": "actual command", "explanation": "What this command does and why"}
+    {"cmd": "actual command", "explanation": "What this does"}
   ],
-  "expected_outcome": "Brief expected result",
+  "expected_outcome": "Expected result",
   "is_final_step": false,
-  "next_steps": "If task is complete, suggest what user might want to do next (optional)"
+  "next_steps": "Suggestions for user (only when complete)"
 }
 
-**IMPORTANT**:
-- Each command MUST have an explanation field describing what it does
-- When is_final_step is true, provide next_steps with suggestions for the user
-- Keep explanations concise but informative
-
-**When previous commands failed**:
-- DO NOT just analyze the failure and stop
-- DO execute alternative commands to fix the problem
-- Examples: if Node.js 22 fails due to glibc, try: nvm install 18 && nvm use 18
+**CRITICAL RULES**:
+1. ALWAYS provide commands - never just analyze
+2. NEVER repeat failed commands - try completely different approaches
+3. Use "thinking" field for deep analysis before deciding
+4. Only set is_final_step=true when task is VERIFIED complete
+5. If stuck after 3 failures, try: version managers (nvm/pyenv), containers, or alternative tools
 
 Notes:
-- Use your knowledge to decide installation approach, do not generate search commands
-- First iteration only runs system check commands
-- Subsequent iterations execute actual install/configure commands
-- Use && to chain multiple commands for sequential execution
-- **Important: Do not use echo for analysis output, put all analysis in reasoning field**
-- Commands should only perform actual operations, no display-only echo statements
-- **Must execute actual operations to complete task, not just analyze**`;
+- Prioritize knowledge base and script library solutions
+- First iteration: check system status only
+- Subsequent iterations: execute actual commands
+- Chain commands with && for sequential execution
+- Put analysis in thinking/reasoning, not in echo commands`;
   }
 }
