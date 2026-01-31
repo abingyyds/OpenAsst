@@ -258,10 +258,24 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
         saveCredentials: false,
         containerName: '',
         containerId: '',
+        isRemoteDocker: false,
         podName: '',
         namespace: 'default',
         kubeContainerName: '',
-        distributionName: 'Ubuntu'
+        isRemoteKubernetes: false,
+        distributionName: 'Ubuntu',
+        dockerApiHost: '',
+        dockerApiPort: 2376,
+        dockerApiProtocol: 'https',
+        dockerTlsCa: '',
+        dockerTlsCert: '',
+        dockerTlsKey: '',
+        remoteHost: '',
+        remotePort: 22,
+        remoteUsername: '',
+        remoteAuthType: 'password',
+        remotePassword: '',
+        remotePrivateKeyPath: ''
       })
       setConnectionType('ssh')
     } catch (err) {
