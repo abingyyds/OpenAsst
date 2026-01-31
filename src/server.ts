@@ -758,13 +758,16 @@ app.post('/api/scripts', async (req, res) => {
       commands: req.body.commands || [],
       author: req.body.author,
       is_public: req.body.isPublic ?? true,
+      document_content: req.body.documentContent || null,
+      document_type: req.body.documentContent ? 'markdown' : null,
       like_count: 0,
       usage_count: 0
     };
 
-    // Only add user_id if valid UUID
-    if (userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
-      insertData.user_id = userId;
+    // Only add user_id if valid UUID (also check authorId from frontend)
+    const finalUserId = userId || req.body.authorId;
+    if (finalUserId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(finalUserId)) {
+      insertData.user_id = finalUserId;
     }
 
     const { data, error } = await supabase
