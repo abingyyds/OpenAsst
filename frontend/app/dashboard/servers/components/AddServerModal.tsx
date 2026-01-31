@@ -28,7 +28,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
     // Kubernetes
     podName: '',
     namespace: 'default',
-    containerName: '',
+    kubeContainerName: '',
     isRemoteKubernetes: false,
     // WSL
     distributionName: 'Ubuntu',
@@ -157,7 +157,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
       } else if (connectionType === 'kubernetes') {
         testConfig.podName = formData.podName
         testConfig.namespace = formData.namespace
-        testConfig.containerName = formData.containerName
+        testConfig.containerName = formData.kubeContainerName
       } else if (connectionType === 'wsl') {
         testConfig.distributionName = formData.distributionName
       }
@@ -237,7 +237,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
       } else if (connectionType === 'kubernetes') {
         submitData.podName = formData.podName
         submitData.namespace = formData.namespace
-        submitData.containerName = formData.containerName
+        submitData.containerName = formData.kubeContainerName
       } else if (connectionType === 'wsl') {
         submitData.distributionName = formData.distributionName
       }
@@ -260,7 +260,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
         containerId: '',
         podName: '',
         namespace: 'default',
-        containerName: '',
+        kubeContainerName: '',
         distributionName: 'Ubuntu'
       })
       setConnectionType('ssh')
@@ -678,8 +678,8 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
                 <label className="block text-sm font-mono text-green-500 mb-2">container: (optional)</label>
                 <input
                   type="text"
-                  value={formData.containerName}
-                  onChange={(e) => setFormData({ ...formData, containerName: e.target.value })}
+                  value={formData.kubeContainerName}
+                  onChange={(e) => setFormData({ ...formData, kubeContainerName: e.target.value })}
                   className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
                   placeholder="specify if pod has multiple containers"
                 />
