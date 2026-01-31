@@ -329,33 +329,44 @@ app.get('/api/servers', async (req, res) => {
 app.post('/api/servers', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'] as string;
+
+    // Build insert object - only include user_id if it's a valid UUID
+    const insertData: any = {
+      name: req.body.name,
+      connection_type: req.body.connectionType,
+      host: req.body.host,
+      port: req.body.port || 22,
+      username: req.body.username,
+      auth_type: req.body.authType,
+      encrypted_password: req.body.password,
+      encrypted_private_key: req.body.privateKey,
+      container_name: req.body.containerName,
+      container_id: req.body.containerId,
+      pod_name: req.body.podName,
+      namespace: req.body.namespace,
+      distribution_name: req.body.distributionName,
+      local_only: req.body.localOnly || false
+    };
+
+    // Only add user_id if it looks like a valid UUID
+    if (userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+      insertData.user_id = userId;
+    }
+
     const { data, error } = await supabase
       .from('servers')
-      .insert({
-        user_id: userId || null,
-        name: req.body.name,
-        connection_type: req.body.connectionType,
-        host: req.body.host,
-        port: req.body.port || 22,
-        username: req.body.username,
-        auth_type: req.body.authType,
-        encrypted_password: req.body.password,
-        encrypted_private_key: req.body.privateKey,
-        container_name: req.body.containerName,
-        container_id: req.body.containerId,
-        pod_name: req.body.podName,
-        namespace: req.body.namespace,
-        distribution_name: req.body.distributionName,
-        local_only: req.body.localOnly || false
-      })
+      .insert(insertData)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('创建服务器失败:', error);
+      throw error;
+    }
     res.json(data);
-  } catch (err) {
+  } catch (err: any) {
     console.error('创建服务器失败:', err);
-    res.status(500).json({ error: '创建服务器失败' });
+    res.status(500).json({ error: '创建服务器失败: ' + (err.message || err) });
   }
 });
 
