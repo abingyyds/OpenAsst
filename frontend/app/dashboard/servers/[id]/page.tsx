@@ -987,21 +987,65 @@ export default function ServerDetailPage() {
             </div>
             <div ref={terminalRef} className="flex-1 overflow-auto space-y-1">
               {terminalOutput.slice(-1000).map((line, i) => {
-                // 根据内容设置不同颜色
-                let className = 'font-mono text-sm'
-                if (line.includes('error') || line.includes('Error') || line.includes('ERROR') || line.includes('✗')) {
-                  className += ' text-red-400'
-                } else if (line.includes('warning') || line.includes('Warning') || line.includes('WARN')) {
-                  className += ' text-yellow-400'
-                } else if (line.includes('success') || line.includes('Success') || line.includes('✓')) {
-                  className += ' text-green-400'
-                } else if (line.startsWith('$')) {
-                  className += ' text-cyan-400 font-bold'
-                } else {
-                  className += ' text-green-400'
+                // 根据内容设置不同样式
+                let className = 'font-mono text-sm whitespace-pre-wrap'
+                let prefix = ''
+                let content = line
+
+                // 分隔线
+                if (line.startsWith('===') || line.startsWith('---')) {
+                  return <div key={i} className="border-t border-green-800/50 my-2" />
                 }
 
-                return <div key={i} className={className}>{line}</div>
+                // AI 分析标题
+                if (line.startsWith('🔄') || line.startsWith('🤖') || line.startsWith('📋')) {
+                  return (
+                    <div key={i} className="bg-green-900/20 border-l-2 border-green-500 px-3 py-2 my-2 rounded-r">
+                      <span className="text-green-300 font-bold">{line}</span>
+                    </div>
+                  )
+                }
+
+                // AI 思考/分析
+                if (line.startsWith('💭')) {
+                  return (
+                    <div key={i} className="bg-blue-900/20 border-l-2 border-blue-400 px-3 py-2 my-1 rounded-r">
+                      <span className="text-blue-300 text-sm">{line}</span>
+                    </div>
+                  )
+                }
+
+                // 命令执行
+                if (line.startsWith('$') || line.startsWith('> ')) {
+                  return (
+                    <div key={i} className="bg-gray-800/50 px-3 py-1 rounded my-1">
+                      <span className="text-cyan-400 font-bold font-mono text-sm">{line}</span>
+                    </div>
+                  )
+                }
+
+                // 成功
+                if (line.includes('✓') || line.includes('success') || line.includes('Success') || line.includes('完成')) {
+                  className += ' text-green-400'
+                }
+                // 错误
+                else if (line.includes('✗') || line.includes('error') || line.includes('Error') || line.includes('ERROR') || line.includes('failed')) {
+                  className += ' text-red-400'
+                }
+                // 警告
+                else if (line.includes('⚠') || line.includes('warning') || line.includes('Warning') || line.includes('WARN')) {
+                  className += ' text-yellow-400'
+                }
+                // 进度/状态
+                else if (line.startsWith('⏳') || line.startsWith('---')) {
+                  className += ' text-gray-400 text-xs'
+                }
+                // 普通输出
+                else {
+                  className += ' text-green-400/80'
+                }
+
+                return <div key={i} className={className}>{content}</div>
               })}
             </div>
           </div>
