@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 
 type Platform = 'unix' | 'powershell' | 'cmd'
 
@@ -21,14 +23,59 @@ const installCommands: Record<Platform, { label: string; command: string }> = {
 }
 
 export default function Home() {
+  const router = useRouter()
   const [platform, setPlatform] = useState<Platform>('unix')
   const [copied, setCopied] = useState(false)
+  const [authLoading, setAuthLoading] = useState(false)
+
+  // Handle OAuth callback from URL hash
+  useEffect(() => {
+    const handleOAuthCallback = async () => {
+      const hash = window.location.hash
+      if (hash && hash.includes('access_token')) {
+        setAuthLoading(true)
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession()
+          if (session) {
+            const user = session.user
+            const isGitHubUser = user.app_metadata?.provider === 'github'
+            const createdAt = new Date(user.created_at).getTime()
+            const lastSignIn = new Date(user.last_sign_in_at || user.created_at).getTime()
+            const isFirstLogin = Math.abs(lastSignIn - createdAt) < 60000
+
+            if (isGitHubUser && isFirstLogin) {
+              localStorage.setItem('github_first_login', 'true')
+              router.push('/auth/share-repos')
+            } else {
+              router.push('/dashboard')
+            }
+          }
+        } catch (err) {
+          console.error('OAuth callback error:', err)
+        }
+        setAuthLoading(false)
+      }
+    }
+    handleOAuthCallback()
+  }, [router])
 
   const handleCopy = () => {
     navigator.clipboard.writeText(installCommands[platform].command)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0f0d]">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-green-400 font-mono">Processing login...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-[#0a0f0d] grid-pattern relative overflow-hidden">
       {/* Animated background gradient */}
