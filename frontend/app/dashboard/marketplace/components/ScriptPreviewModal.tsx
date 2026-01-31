@@ -88,16 +88,16 @@ export default function ScriptPreviewModal({ script, isOpen, onClose, onUse }: S
 
         {/* Content: Commands or Document */}
         <div className="mb-6">
-          {script.documentContent ? (
+          {(script.documentContent || script.document_content) ? (
             <>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-mono text-green-500"># document</h3>
                 <span className="px-2 py-1 bg-green-900/30 text-green-400 text-xs rounded font-mono">
-                  {script.documentType === 'markdown' ? 'markdown' : 'plain_text'}
+                  {(script.documentType || script.document_type) === 'markdown' ? 'markdown' : 'plain_text'}
                 </span>
               </div>
               <div className="bg-[#0a0f0d] border border-green-900/50 p-4 rounded text-sm overflow-x-auto max-h-96 overflow-y-auto">
-                <pre className="whitespace-pre-wrap font-mono text-xs text-green-300">{script.documentContent}</pre>
+                <pre className="whitespace-pre-wrap font-mono text-xs text-green-300">{script.documentContent || script.document_content}</pre>
               </div>
               <p className="text-xs text-gray-600 mt-2 font-mono">
                 AI will read this document and execute operations accordingly

@@ -32,13 +32,16 @@ export interface ScriptTemplate {
   usageCount?: number
   usage_count?: number
   likeCount?: number
+  like_count?: number
   rating?: number
   createdAt?: string
   created_at?: string
   updatedAt?: string
   updated_at?: string
   documentContent?: string
+  document_content?: string
   documentType?: 'markdown' | 'plain_text'
+  document_type?: 'markdown' | 'text'
 }
 
 export const scriptApi = {
