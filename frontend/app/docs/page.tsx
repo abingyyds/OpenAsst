@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
-type Category = 'getting-started' | 'server' | 'script' | 'ai' | 'config'
+type Category = 'getting-started' | 'task' | 'deploy' | 'api' | 'service' | 'config'
 
 interface Command {
   cmd: string
@@ -18,20 +18,10 @@ const categories: Record<Category, { title: string; icon: string; commands: Comm
     icon: '>',
     commands: [
       {
-        cmd: 'openasst login',
-        desc: 'Login to OpenAsst platform with your credentials',
-        example: 'openasst login',
-        output: '✓ Login successful! Welcome back, user@example.com'
-      },
-      {
-        cmd: 'openasst logout',
-        desc: 'Logout from current session',
-      },
-      {
-        cmd: 'openasst status',
-        desc: 'Show current connection and authentication status',
-        example: 'openasst status',
-        output: 'Status: Connected\nUser: user@example.com\nServers: 3 configured'
+        cmd: 'openasst config',
+        desc: 'Configure API key and settings interactively',
+        example: 'openasst config',
+        output: '? Enter your Anthropic API key: sk-ant-***\n? Select model: claude-sonnet-4-20250514\n✓ Configuration saved!'
       },
       {
         cmd: 'openasst --version',
@@ -43,104 +33,123 @@ const categories: Record<Category, { title: string; icon: string; commands: Comm
       },
     ]
   },
-  'server': {
-    title: 'Server Management',
-    icon: '#',
-    commands: [
-      {
-        cmd: 'openasst list servers',
-        desc: 'List all configured servers',
-        example: 'openasst list servers',
-        output: 'ID          NAME           STATUS\n─────────────────────────────────\nsvr-001     production     online\nsvr-002     staging        online\nsvr-003     dev-server     offline'
-      },
-      {
-        cmd: 'openasst connect <server-id>',
-        desc: 'Connect to a remote server via SSH',
-        example: 'openasst connect svr-001',
-        output: 'Connecting to production (192.168.1.100)...\n✓ Connected successfully'
-      },
-      {
-        cmd: 'openasst disconnect',
-        desc: 'Disconnect from current server',
-      },
-      {
-        cmd: 'openasst server info <server-id>',
-        desc: 'Show detailed server information',
-        example: 'openasst server info svr-001',
-        output: 'Name: production\nHost: 192.168.1.100\nOS: Ubuntu 22.04\nCPU: 45%  Memory: 62%'
-      },
-    ]
-  },
-  'script': {
-    title: 'Script Execution',
-    icon: '$',
-    commands: [
-      {
-        cmd: 'openasst run <script-name>',
-        desc: 'Execute a script from marketplace on connected server',
-        example: 'openasst run deploy-nodejs',
-        output: 'Running deploy-nodejs on production...\n[1/3] Installing dependencies...\n[2/3] Building application...\n[3/3] Starting service...\n✓ Deployment complete!'
-      },
-      {
-        cmd: 'openasst run <script> --server <id>',
-        desc: 'Run script on a specific server',
-        example: 'openasst run backup-db --server svr-002',
-      },
-      {
-        cmd: 'openasst list scripts',
-        desc: 'List available scripts from marketplace',
-      },
-      {
-        cmd: 'openasst script info <name>',
-        desc: 'Show script details and documentation',
-      },
-    ]
-  },
-  'ai': {
-    title: 'AI Assistant',
+  'task': {
+    title: 'Smart Task Engine',
     icon: '*',
     commands: [
       {
-        cmd: 'openasst chat "<message>"',
-        desc: 'Send a message to AI assistant',
-        example: 'openasst chat "check disk usage"',
-        output: 'AI: I\'ll check the disk usage for you.\n\nFilesystem      Size  Used  Avail  Use%\n/dev/sda1       100G   45G    55G   45%\n/dev/sdb1       500G  200G   300G   40%'
+        cmd: 'openasst do "<task>"',
+        desc: 'Execute any task using natural language',
+        example: 'openasst do "install nginx and configure it for port 8080"',
+        output: '> Analyzing task...\n> Installing nginx...\n> Configuring port 8080...\n✓ Task completed successfully!'
       },
       {
-        cmd: 'openasst chat -i',
-        desc: 'Start interactive chat mode',
-        example: 'openasst chat -i',
-        output: 'Entering interactive mode. Type "exit" to quit.\n\nYou: '
+        cmd: 'openasst do "<task>" -y',
+        desc: 'Execute task with auto-confirm (skip confirmations)',
+        example: 'openasst do "update all npm packages" -y',
       },
       {
-        cmd: 'openasst ask "<question>"',
-        desc: 'Ask AI a quick question without executing',
-        example: 'openasst ask "how to restart nginx"',
+        cmd: 'openasst assistant',
+        desc: 'Start interactive assistant mode for continuous conversation',
+        example: 'openasst assistant',
+        output: 'OpenAsst Assistant v1.0.0\nType your request or "exit" to quit.\n\nYou: '
+      },
+    ]
+  },
+  'deploy': {
+    title: 'Auto Deployment',
+    icon: '#',
+    commands: [
+      {
+        cmd: 'openasst deploy <source>',
+        desc: 'Deploy from documentation (URL or local file)',
+        example: 'openasst deploy https://example.com/install-guide.md',
+        output: '> Fetching documentation...\n> Parsing install steps...\n> Executing step 1/3: npm install\n> Executing step 2/3: npm run build\n> Executing step 3/3: pm2 start\n✓ Deployment complete!'
+      },
+      {
+        cmd: 'openasst deploy ./INSTALL.md',
+        desc: 'Deploy from local markdown file',
+      },
+      {
+        cmd: 'openasst auto <git-url>',
+        desc: 'Auto deploy from Git repository',
+        example: 'openasst auto https://github.com/user/repo.git',
+        output: '> Cloning repository...\n> Detecting project type: Node.js\n> Reading README.md for instructions...\n> Running npm install && npm run build\n✓ Auto deployment complete!'
+      },
+    ]
+  },
+  'api': {
+    title: 'API Sharing',
+    icon: '$',
+    commands: [
+      {
+        cmd: 'openasst api share',
+        desc: 'Share AI API with all supported development tools',
+        example: 'openasst api share',
+        output: '✓ API shared with:\n  - Claude Code\n  - Cursor\n  - Continue\n  - Aider'
+      },
+      {
+        cmd: 'openasst api share <tool>',
+        desc: 'Share API with a specific tool',
+        example: 'openasst api share claude-code',
+        output: '✓ API configured for Claude Code\n  Config path: ~/.claude/config.json'
+      },
+      {
+        cmd: 'openasst skill list',
+        desc: 'List all installed skills',
+        example: 'openasst skill list',
+        output: 'Installed Skills:\n  git      - Git operations\n  docker   - Docker management\n  system   - System utilities'
+      },
+    ]
+  },
+  'service': {
+    title: 'Service & Monitoring',
+    icon: '@',
+    commands: [
+      {
+        cmd: 'openasst service list',
+        desc: 'List all background services',
+        example: 'openasst service list',
+        output: 'NAME          STATUS    PID     UPTIME\n────────────────────────────────────\napi-server    running   1234    2d 5h\nworker        running   1235    2d 5h\nscheduler     stopped   -       -'
+      },
+      {
+        cmd: 'openasst schedule list',
+        desc: 'List all scheduled tasks',
+        example: 'openasst schedule list',
+        output: 'ID    SCHEDULE       TASK\n─────────────────────────────────\n1     0 2 * * *      backup database\n2     */5 * * * *    health check'
+      },
+      {
+        cmd: 'openasst monitor start',
+        desc: 'Start monitoring services with auto-restart',
+        example: 'openasst monitor start',
+        output: '✓ Monitoring started\n  Watching: api-server, worker\n  Auto-restart: enabled'
       },
     ]
   },
   'config': {
     title: 'Configuration',
-    icon: '@',
+    icon: '%',
     commands: [
+      {
+        cmd: 'openasst config',
+        desc: 'Interactive configuration wizard',
+      },
       {
         cmd: 'openasst config set <key> <value>',
         desc: 'Set a configuration value',
-        example: 'openasst config set api_url https://api.example.com',
+        example: 'openasst config set model claude-sonnet-4-20250514',
       },
       {
         cmd: 'openasst config get <key>',
         desc: 'Get a configuration value',
+        example: 'openasst config get apiKey',
+        output: 'sk-ant-***'
       },
       {
         cmd: 'openasst config list',
         desc: 'List all configuration settings',
         example: 'openasst config list',
-        output: 'api_url: https://api.openasst.com\ntheme: dark\nlanguage: en'
-      },
-      {
-        cmd: 'openasst config reset',
-        desc: 'Reset configuration to defaults',
+        output: 'apiKey: sk-ant-***\nbaseUrl: https://api.anthropic.com\nmodel: claude-sonnet-4-20250514'
       },
     ]
   },

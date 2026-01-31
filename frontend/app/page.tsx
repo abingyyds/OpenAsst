@@ -201,52 +201,52 @@ export default function Home() {
               <span className="ml-4 text-green-500/70 text-sm font-mono">openasst --help</span>
             </div>
             <div className="p-6 font-mono text-sm space-y-4">
-              {/* Login */}
+              {/* Do Task */}
               <div>
                 <div className="text-green-400 mb-1">
-                  <span className="text-green-600">$</span> openasst login
+                  <span className="text-green-600">$</span> openasst do &quot;install nginx&quot;
                 </div>
-                <div className="text-gray-500 pl-4">Login to OpenAsst platform</div>
+                <div className="text-gray-500 pl-4">Execute any task with natural language</div>
               </div>
 
-              {/* Connect */}
+              {/* Assistant */}
               <div>
                 <div className="text-green-400 mb-1">
-                  <span className="text-green-600">$</span> openasst connect &lt;server-id&gt;
+                  <span className="text-green-600">$</span> openasst assistant
                 </div>
-                <div className="text-gray-500 pl-4">Connect to a remote server via SSH</div>
+                <div className="text-gray-500 pl-4">Start interactive assistant mode</div>
               </div>
 
-              {/* Run */}
+              {/* Deploy */}
               <div>
                 <div className="text-green-400 mb-1">
-                  <span className="text-green-600">$</span> openasst run &lt;script-name&gt;
+                  <span className="text-green-600">$</span> openasst deploy ./INSTALL.md
                 </div>
-                <div className="text-gray-500 pl-4">Execute a script from marketplace</div>
+                <div className="text-gray-500 pl-4">Deploy from documentation</div>
               </div>
 
-              {/* Chat */}
+              {/* Auto */}
               <div>
                 <div className="text-green-400 mb-1">
-                  <span className="text-green-600">$</span> openasst chat &quot;your message&quot;
+                  <span className="text-green-600">$</span> openasst auto &lt;git-url&gt;
                 </div>
-                <div className="text-gray-500 pl-4">Chat with AI assistant</div>
+                <div className="text-gray-500 pl-4">Auto deploy from Git repository</div>
               </div>
 
-              {/* Status */}
+              {/* API Share */}
               <div>
                 <div className="text-green-400 mb-1">
-                  <span className="text-green-600">$</span> openasst status
+                  <span className="text-green-600">$</span> openasst api share
                 </div>
-                <div className="text-gray-500 pl-4">Show connection and system status</div>
+                <div className="text-gray-500 pl-4">Share API with Claude Code, Cursor, Aider</div>
               </div>
 
-              {/* List */}
+              {/* Config */}
               <div>
                 <div className="text-green-400 mb-1">
-                  <span className="text-green-600">$</span> openasst list servers
+                  <span className="text-green-600">$</span> openasst config
                 </div>
-                <div className="text-gray-500 pl-4">List all configured servers</div>
+                <div className="text-gray-500 pl-4">Configure API key and settings</div>
               </div>
 
               {/* Help */}
