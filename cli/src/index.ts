@@ -4,7 +4,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { configCommand } from './commands/config';
 import { aiCommand } from './commands/ai';
-import { marketListCommand, marketSearchCommand, marketRunCommand } from './commands/market';
+import { marketListCommand, marketSearchCommand, marketRunCommand, marketSyncCommand } from './commands/market';
 import { deployCommand, deployTextCommand } from './commands/deploy';
 import { monitorStartCommand, monitorStatusCommand } from './commands/monitor';
 import { interactiveCommand } from './commands/interactive';
@@ -161,6 +161,11 @@ market
   .command('run <script-id>')
   .description('Run a script')
   .action(marketRunCommand);
+
+market
+  .command('sync')
+  .description('Sync scripts from web server')
+  .action(marketSyncCommand);
 
 // Service management
 const service = program

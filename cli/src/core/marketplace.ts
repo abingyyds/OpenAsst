@@ -1,23 +1,33 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
+import axios from 'axios';
 import { CommandScript } from '../types';
 
-const SCRIPTS_FILE = path.join(__dirname, '../../data/scripts.json');
+const DATA_DIR = path.join(os.homedir(), '.openasst-cli');
+const SCRIPTS_FILE = path.join(DATA_DIR, 'scripts.json');
+const DEFAULT_API_URL = 'http://localhost:3002';
 
 export class Marketplace {
   private scripts: CommandScript[] = [];
+  private apiUrl: string;
 
-  constructor() {
+  constructor(apiUrl?: string) {
+    this.apiUrl = apiUrl || process.env.OPENASST_API_URL || DEFAULT_API_URL;
     this.loadScripts();
   }
 
   private loadScripts(): void {
     try {
+      // Ensure data directory exists
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+
       if (fs.existsSync(SCRIPTS_FILE)) {
         const data = fs.readFileSync(SCRIPTS_FILE, 'utf-8');
         this.scripts = JSON.parse(data);
       } else {
-        // Create default scripts
         this.scripts = this.getDefaultScripts();
         this.saveScripts();
       }
@@ -84,5 +94,62 @@ export class Marketplace {
       s.description.toLowerCase().includes(lowerKeyword) ||
       s.tags?.some(tag => tag.toLowerCase().includes(lowerKeyword))
     );
+  }
+
+  // Sync scripts from web API
+  async sync(): Promise<{ success: boolean; count: number; message: string }> {
+    try {
+      const response = await axios.get(`${this.apiUrl}/api/scripts`, {
+        timeout: 10000
+      });
+
+      if (response.data && Array.isArray(response.data)) {
+        // Convert API response to CommandScript format
+        const remoteScripts: CommandScript[] = response.data.map((script: any) => ({
+          id: script.id || script._id,
+          name: script.name,
+          description: script.description,
+          commands: script.commands || [],
+          category: script.category || 'custom',
+          tags: script.tags || [],
+          documentContent: script.documentContent,
+          documentType: script.documentType
+        }));
+
+        // Merge with local default scripts
+        const defaultScripts = this.getDefaultScripts();
+        const mergedScripts = [...defaultScripts];
+
+        // Add remote scripts that don't conflict with defaults
+        for (const remote of remoteScripts) {
+          if (!mergedScripts.find(s => s.id === remote.id)) {
+            mergedScripts.push(remote);
+          }
+        }
+
+        this.scripts = mergedScripts;
+        this.saveScripts();
+
+        return {
+          success: true,
+          count: remoteScripts.length,
+          message: `Synced ${remoteScripts.length} scripts from server`
+        };
+      }
+
+      return { success: false, count: 0, message: 'Invalid response from server' };
+    } catch (error: any) {
+      return {
+        success: false,
+        count: 0,
+        message: error.code === 'ECONNREFUSED'
+          ? 'Cannot connect to server. Is the backend running?'
+          : error.message
+      };
+    }
+  }
+
+  getApiUrl(): string {
+    return this.apiUrl;
   }
 }

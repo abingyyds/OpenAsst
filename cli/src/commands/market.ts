@@ -8,6 +8,18 @@ import { ConfigManager } from '../utils/config';
 const marketplace = new Marketplace();
 const executor = new CommandExecutor();
 
+export async function marketSyncCommand(): Promise<void> {
+  Logger.info(`Syncing from ${marketplace.getApiUrl()}...`);
+
+  const result = await marketplace.sync();
+
+  if (result.success) {
+    Logger.success(result.message);
+  } else {
+    Logger.error(result.message);
+  }
+}
+
 export async function marketListCommand(): Promise<void> {
   const scripts = marketplace.getAll();
 
