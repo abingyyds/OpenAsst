@@ -74,6 +74,9 @@ ${commandHistory.slice(-5).map(log =>
       return content.type === 'text' ? content.text : '';
     } catch (error: any) {
       console.error('Claude API调用失败:', error);
+      console.error('API配置 - baseURL:', this.client.baseURL);
+      console.error('API配置 - model:', this.model);
+      console.error('错误详情:', JSON.stringify(error, null, 2));
 
       // 提取有用的错误信息
       let errorMessage = 'AI服务暂时不可用';
