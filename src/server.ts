@@ -2036,9 +2036,9 @@ async function executeSmartAction(action: any, executor: any, state: any): Promi
 // ============ Knowledge Base API ============
 
 // Get all knowledge items
-app.get('/api/knowledge', (req, res) => {
+app.get('/api/knowledge', async (req, res) => {
   try {
-    const items = knowledgeManager.getAllItems();
+    const items = await knowledgeManager.getAllItems();
     res.json(items);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
@@ -2046,13 +2046,13 @@ app.get('/api/knowledge', (req, res) => {
 });
 
 // Search knowledge base
-app.get('/api/knowledge/search', (req, res) => {
+app.get('/api/knowledge/search', async (req, res) => {
   try {
     const query = req.query.q as string;
     if (!query) {
       return res.status(400).json({ error: 'Query required' });
     }
-    const results = knowledgeManager.search(query);
+    const results = await knowledgeManager.search(query);
     res.json(results);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });

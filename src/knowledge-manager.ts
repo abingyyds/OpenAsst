@@ -191,10 +191,58 @@ export class KnowledgeManager {
     }
   }
 
-  // 从市场同步 (暂时返回0，后续实现)
+  // 从市场同步 script_templates 到 knowledge_items
   async syncFromMarketplace(): Promise<number> {
-    // TODO: 从 script_templates 同步到 knowledge_items
-    return 0;
+    try {
+      // 1. 获取所有公开的 script_templates
+      const { data: scripts, error: fetchError } = await supabase
+        .from('script_templates')
+        .select('*')
+        .eq('is_public', true);
+
+      if (fetchError || !scripts) {
+        console.error('获取脚本模板失败:', fetchError);
+        return 0;
+      }
+
+      // 2. 获取已存在的 knowledge_items 标题
+      const { data: existingItems } = await supabase
+        .from('knowledge_items')
+        .select('title');
+
+      const existingTitles = new Set((existingItems || []).map(i => i.title));
+
+      // 3. 转换并插入新的知识项
+      let syncedCount = 0;
+      for (const script of scripts) {
+        // 跳过已存在的
+        if (existingTitles.has(script.name)) continue;
+
+        // 转换格式
+        const knowledgeItem = {
+          title: script.name,
+          keywords: script.tags || [],
+          solution: script.document_content || script.description || '',
+          commands: script.commands || [],
+          category: script.category || 'custom',
+          synced_to_github: false
+        };
+
+        const { error: insertError } = await supabase
+          .from('knowledge_items')
+          .insert(knowledgeItem);
+
+        if (!insertError) {
+          syncedCount++;
+        }
+      }
+
+      console.log(`从市场同步了 ${syncedCount} 个知识项`);
+      return syncedCount;
+    } catch (error) {
+      console.error('市场同步失败:', error);
+      return 0;
+    }
   }
 
   // 更新 GitHub 文件
