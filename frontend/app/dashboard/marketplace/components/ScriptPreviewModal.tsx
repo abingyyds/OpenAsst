@@ -14,7 +14,7 @@ export default function ScriptPreviewModal({ script, isOpen, onClose, onUse }: S
 
   // Detect dangerous commands
   const dangerousKeywords = ['rm -rf', 'dd if=', 'mkfs', ':(){:|:&};:', 'chmod 777', '> /dev/sda']
-  const hasDangerousCommands = script.commands?.some(cmd =>
+  const hasDangerousCommands = script.commands?.some((cmd: string) =>
     dangerousKeywords.some(keyword => cmd.includes(keyword))
   )
 
