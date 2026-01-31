@@ -31,6 +31,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
   const [cliInstalled, setCliInstalled] = useState<boolean | null>(null)
   const [showCliSuggestion, setShowCliSuggestion] = useState(false)
   const [executionStats, setExecutionStats] = useState<{iterations: number, commands: number, errors: number} | null>(null)
+  const [installingCli, setInstallingCli] = useState(false)
   const commandInputRef = useRef<HTMLInputElement>(null)
   const terminalRef = useRef<HTMLDivElement>(null)
   const aiAnalysisRef = useRef<HTMLDivElement>(null)
@@ -731,6 +732,33 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
       setAutoExecuting(false)
       abortControllerRef.current = null
     }
+  }
+
+  // 一键安装CLI
+  const handleInstallCli = async () => {
+    setInstallingCli(true)
+    setShowCliPrompt(false)
+    setShowCliSuggestion(false)
+
+    // 设置安装任务
+    const installTask = `请在这台服务器上安装 OpenAsst CLI 工具。
+安装步骤：
+1. 首先检查是否已安装 curl 和 bash
+2. 执行一键安装脚本: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+3. 如果安装脚本失败，尝试手动安装：
+   - git clone https://github.com/abingyyds/OpenAsst.git
+   - cd OpenAsst/cli && npm install && npm run build && npm link
+4. 验证安装: openasst --version
+5. 如果需要配置，运行: openasst config`
+
+    // 使用智能执行来安装
+    setChatMessage(installTask)
+
+    // 延迟执行，让状态更新
+    setTimeout(() => {
+      handleTwoLayerExecute()
+      setInstallingCli(false)
+    }, 100)
   }
 
   if (loading) {
