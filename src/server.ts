@@ -1964,6 +1964,50 @@ app.post('/api/knowledge/learn', async (req, res) => {
   }
 });
 
+// GitHub README import API
+app.post('/api/github/import-readmes', async (req, res) => {
+  try {
+    const { repos, username } = req.body;
+
+    if (!repos || !Array.isArray(repos)) {
+      return res.status(400).json({ error: 'repos array required' });
+    }
+
+    const imported: string[] = [];
+    const failed: string[] = [];
+
+    for (const repo of repos) {
+      try {
+        // Fetch README from GitHub
+        const readmeUrl = `https://api.github.com/repos/${repo.full_name}/readme`;
+        const response = await fetch(readmeUrl, {
+          headers: { 'Accept': 'application/vnd.github.v3.raw' }
+        });
+
+        if (!response.ok) throw new Error('README not found');
+        const readmeContent = await response.text();
+
+        // Add to knowledge base
+        await knowledgeManager.addItem('github-readme', {
+          title: `${repo.name} - ${repo.description || 'GitHub Repository'}`,
+          keywords: [repo.name, repo.language, username, 'github', 'readme'].filter(Boolean),
+          solution: readmeContent.substring(0, 5000),
+          commands: []
+        });
+
+        imported.push(repo.full_name);
+      } catch (err) {
+        console.error(`Failed to import ${repo.full_name}:`, err);
+        failed.push(repo.full_name);
+      }
+    }
+
+    res.json({ success: true, imported, failed });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 
