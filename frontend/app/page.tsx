@@ -187,9 +187,14 @@ export default function Home() {
         <div className="mt-16 w-full max-w-4xl">
           <h2 className="text-2xl font-bold text-white mb-6 text-center font-mono"># CLI Documentation</h2>
           <p className="text-center text-gray-500 mb-6 font-mono text-sm">
-            <Link href="/docs" className="text-green-400 hover:text-green-300 underline">
-              View full documentation →
-            </Link>
+            <a
+              href="https://github.com/abingyyds/OpenAsst#all-cli-commands"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green-400 hover:text-green-300 underline"
+            >
+              View full documentation on GitHub →
+            </a>
           </p>
 
           {/* Terminal Window */}
