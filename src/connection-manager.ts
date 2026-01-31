@@ -22,9 +22,19 @@ export class ConnectionManager {
   async getExecutor(config: ServerConfig): Promise<ConnectionExecutor> {
     const key = config.id;
 
-    // 如果已有执行器，直接返回
+    // 如果已有执行器，检查连接是否有效
     if (this.executors.has(key)) {
-      return this.executors.get(key)!;
+      const existingExecutor = this.executors.get(key)!;
+      // Try to verify connection is still alive
+      try {
+        await existingExecutor.execute('echo 1');
+        return existingExecutor;
+      } catch (error) {
+        // Connection is dead, remove and recreate
+        console.log(`Connection for ${key} is dead, reconnecting...`);
+        existingExecutor.disconnect();
+        this.executors.delete(key);
+      }
     }
 
     // 根据连接类型创建执行器
