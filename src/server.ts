@@ -36,7 +36,7 @@ const searchService = new SearchService(
 const claudeAssistant = new ClaudeAssistant(
   process.env.ANTHROPIC_API_KEY || '',
   process.env.ANTHROPIC_BASE_URL || undefined,
-  undefined,
+  process.env.ANTHROPIC_MODEL || undefined,
   searchService
 );
 const scriptExecutor = new ScriptExecutor(connectionManager, claudeAssistant);
