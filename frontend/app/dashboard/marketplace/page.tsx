@@ -462,7 +462,7 @@ export default function MarketplacePage() {
               >
                 {'>'} use
               </button>
-              {userId && script.authorId === userId && (
+              {userId && (script.authorId === userId || script.author_id === userId || script.user_id === userId) && (
                 <button
                   onClick={() => handleDelete(script.id)}
                   className="px-3 py-2 bg-red-900/50 text-red-400 text-sm rounded hover:bg-red-800 font-mono"
