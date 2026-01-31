@@ -5,7 +5,7 @@ import * as fs from 'fs';
 export class SSHManager {
   private connections: Map<string, Client> = new Map();
 
-  async connect(config: ServerConfig, timeout: number = 30000): Promise<void> {
+  async connect(config: ServerConfig, timeout: number = 60000): Promise<void> {
     // 如果已有连接，先检查是否有效
     const existingClient = this.connections.get(config.id);
     if (existingClient) {
