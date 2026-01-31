@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
+import { useParams } from 'next/navigation'
 import { serverApi, Server } from '@/lib/api/servers'
 import { chatApi, ChatMessage } from '@/lib/api/chat'
 import { commandApi } from '@/lib/api/commands'
@@ -9,7 +10,9 @@ import { scriptApi, ScriptTemplate } from '@/lib/api/scripts'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useLanguage } from '@/contexts/LanguageContext'
 
-export default function ServerDetailPage({ params }: { params: { id: string } }) {
+export default function ServerDetailPage() {
+  const params = useParams()
+  const id = params.id as string
   const { language } = useLanguage()
   const [server, setServer] = useState<Server | null>(null)
   const [loading, setLoading] = useState(true)
@@ -60,7 +63,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     checkCliStatus()
 
     // Load command history from localStorage
-    const savedHistory = localStorage.getItem(`command-history-${params.id}`)
+    const savedHistory = localStorage.getItem(`command-history-${id}`)
     if (savedHistory) {
       try {
         setCommandHistory(JSON.parse(savedHistory))
@@ -83,13 +86,13 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
         console.error('Failed to parse pending script:', error)
       }
     }
-  }, [params.id])
+  }, [id])
 
   const loadServerData = async () => {
     try {
       const [serverData, messages] = await Promise.all([
-        serverApi.getById(params.id),
-        chatApi.getMessages(params.id)
+        serverApi.getById(id),
+        chatApi.getMessages(id)
       ])
       setServer(serverData)
       setChatMessages(messages)
@@ -204,7 +207,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     // Save to command history
     const newHistory = [cmd, ...commandHistory.filter(h => h !== cmd)].slice(0, 50) // Keep last 50 commands
     setCommandHistory(newHistory)
-    localStorage.setItem(`command-history-${params.id}`, JSON.stringify(newHistory))
+    localStorage.setItem(`command-history-${id}`, JSON.stringify(newHistory))
 
     setTerminalOutput([...terminalOutput, `$ ${cmd}`, '命令执行中...'])
 
@@ -212,7 +215,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     const aiMode = localStorage.getItem('ai_mode') || 'auto'
 
     try {
-      const result = await commandApi.execute(params.id, cmd)
+      const result = await commandApi.execute(id, cmd)
       const newOutput = [...terminalOutput, `$ ${cmd}`, result.output]
 
       setTerminalOutput(newOutput)
@@ -221,7 +224,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
       if (aiMode === 'auto') {
         try {
           const aiResponse = await chatApi.chatWithAI(
-            params.id,
+            id,
             `请分析这个命令的执行结果：\n命令：${cmd}\n输出：${result.output}`,
             language
           )
@@ -238,7 +241,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
       if (aiMode === 'auto' || aiMode === 'error') {
         try {
           const aiResponse = await chatApi.chatWithAI(
-            params.id,
+            id,
             `这个命令执行失败了，请帮我分析原因并提供解决方案：\n命令：${cmd}\n错误：${errorMsg}`,
             language
           )
@@ -286,7 +289,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     // 添加用户消息到聊天界面
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
-      server_id: params.id,
+      server_id: id,
       user_id: 'current-user',
       role: 'user',
       content: userMessage,
@@ -298,7 +301,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     const aiMsgId = (Date.now() + 1).toString()
     const aiMsg: ChatMessage = {
       id: aiMsgId,
-      server_id: params.id,
+      server_id: id,
       user_id: 'assistant',
       role: 'assistant',
       content: '',
@@ -309,7 +312,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     try {
       // 使用流式API
       await chatApi.chatWithAIStream(
-        params.id,
+        id,
         userMessage,
         // onChunk: 每次收到新内容时更新消息
         (chunk) => {
@@ -371,7 +374,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     // 添加用户任务到聊天界面
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
-      server_id: params.id,
+      server_id: id,
       user_id: 'current-user',
       role: 'user',
       content: `🤖 自动执行任务: ${task}`,
@@ -386,7 +389,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     let fullResult: any = null
 
     try {
-      await chatApi.autoExecuteStream(params.id, task, {
+      await chatApi.autoExecuteStream(id, task, {
         onStart: (data) => {
           flushSync(() => {
             setAiMessages(prev => [...prev, `📋 ${data.message}`])
@@ -569,7 +572,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
 
         const resultMsg: ChatMessage = {
           id: (Date.now() + 1).toString(),
-          server_id: params.id,
+          server_id: id,
           user_id: 'assistant',
           role: 'assistant',
           content: `✅ Auto-execution completed\n\nRounds: ${fullResult.iterations || 0}\n\n${executionDetails}`,
@@ -583,7 +586,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
 
       const errorMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        server_id: params.id,
+        server_id: id,
         user_id: 'assistant',
         role: 'assistant',
         content: '❌ 自动执行失败，请稍后再试。',
@@ -613,7 +616,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     // 添加用户任务
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
-      server_id: params.id,
+      server_id: id,
       user_id: 'current-user',
       role: 'user',
       content: `🔄 Smart Execute: ${task}`,
@@ -629,7 +632,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
 
     try {
       // 第一层：使用流式执行，实时显示终端内容
-      await chatApi.autoExecuteStream(params.id, task, {
+      await chatApi.autoExecuteStream(id, task, {
         onStart: (data) => {
           flushSync(() => {
             setAiMessages(prev => [...prev, `📋 ${data.message}`])
@@ -723,7 +726,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
 
           const resultMsg: ChatMessage = {
             id: (Date.now() + 1).toString(),
-            server_id: params.id,
+            server_id: id,
             user_id: 'assistant',
             role: 'assistant',
             content: `## AI深度分析\n\n${analysisResponse.analysis}`,
@@ -1083,7 +1086,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
               onClick={async () => {
                 if (confirm('Clear chat history?')) {
                   try {
-                    await chatApi.clearMessages(params.id)
+                    await chatApi.clearMessages(id)
                     setChatMessages([])
                     setAiMessages([])
                   } catch (error) {
