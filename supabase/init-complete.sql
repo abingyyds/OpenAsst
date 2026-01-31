@@ -4,6 +4,7 @@
 -- ============================================
 -- 第一步：清理旧表
 -- ============================================
+DROP TABLE IF EXISTS knowledge_items CASCADE;
 DROP TABLE IF EXISTS script_ratings CASCADE;
 DROP TABLE IF EXISTS script_favorites CASCADE;
 DROP TABLE IF EXISTS script_likes CASCADE;
@@ -229,3 +230,57 @@ INSERT INTO profiles (id, username, display_name)
 SELECT id, email, email
 FROM auth.users
 WHERE id NOT IN (SELECT id FROM profiles);
+
+-- ============================================
+-- 第六步：知识库表
+-- ============================================
+
+CREATE TABLE knowledge_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category TEXT NOT NULL DEFAULT 'custom',
+  title TEXT NOT NULL,
+  keywords TEXT[] DEFAULT '{}',
+  solution TEXT,
+  commands TEXT[] DEFAULT '{}',
+  synced_to_github BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_knowledge_category ON knowledge_items(category);
+CREATE INDEX idx_knowledge_synced ON knowledge_items(synced_to_github);
+
+ALTER TABLE knowledge_items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read knowledge" ON knowledge_items FOR SELECT USING (true);
+CREATE POLICY "Service can insert knowledge" ON knowledge_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Service can update knowledge" ON knowledge_items FOR UPDATE USING (true);
+CREATE POLICY "Service can delete knowledge" ON knowledge_items FOR DELETE USING (true);
+
+-- ============================================
+-- 第七步：RPC 函数
+-- ============================================
+
+-- 增加点赞数
+CREATE OR REPLACE FUNCTION increment_like_count(script_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE script_templates SET like_count = like_count + 1 WHERE id = script_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 减少点赞数
+CREATE OR REPLACE FUNCTION decrement_like_count(script_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE script_templates SET like_count = GREATEST(like_count - 1, 0) WHERE id = script_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 增加使用次数
+CREATE OR REPLACE FUNCTION increment_usage_count(script_id UUID)
+RETURNS void AS $$
+BEGIN
+  UPDATE script_templates SET usage_count = usage_count + 1 WHERE id = script_id;
+END;
+$$ LANGUAGE plpgsql;
