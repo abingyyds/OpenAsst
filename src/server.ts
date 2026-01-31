@@ -42,7 +42,7 @@ const claudeAssistant = new ClaudeAssistant(
 const scriptExecutor = new ScriptExecutor(connectionManager, claudeAssistant);
 
 const sessionManager = new SessionManager(dataDir);
-const marketplaceManager = new MarketplaceManager(dataDir);
+const marketplaceManager = new MarketplaceManager();
 const knowledgeManager = new KnowledgeManager(
   process.env.REPO_DIR || '.',
   process.env.GITHUB_TOKEN,

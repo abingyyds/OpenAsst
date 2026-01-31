@@ -187,7 +187,7 @@ export class AutoExecuteStream {
 
           // 1. 优先查询命令市场
           this.sendEvent('status', { message: 'Searching marketplace...' });
-          relatedScripts = this.marketplaceManager.searchTemplates(softwareName);
+          relatedScripts = await this.marketplaceManager.searchTemplates(softwareName);
           if (relatedScripts.length > 0) {
             this.sendEvent('status', { message: `Found ${relatedScripts.length} scripts in marketplace` });
           }

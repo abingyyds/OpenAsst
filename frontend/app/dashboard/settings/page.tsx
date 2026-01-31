@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useLanguage, languages } from '@/contexts/LanguageContext'
+import { useLanguage, languages, Language } from '@/contexts/LanguageContext'
 
 interface ApiConfig {
   anthropicApiKey?: string
@@ -234,7 +234,7 @@ export default function SettingsPage() {
             <label className="block text-sm font-mono text-green-500 mb-2">language:</label>
             <select
               value={language}
-              onChange={(e) => setLanguage(e.target.value)}
+              onChange={(e) => setLanguage(e.target.value as Language)}
               className="w-full px-4 py-3 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
             >
               {languages.map(lang => (
