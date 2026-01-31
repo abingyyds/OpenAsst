@@ -49,13 +49,12 @@ export async function doCommand(task: string, options: DoOptions): Promise<void>
     }
   }
 
-  // Execute the task with script context
-  const taskWithContext = scriptContext ? `${task}${scriptContext}` : task;
-
-  const result = await engine.executeTask(taskWithContext, {
+  // Execute the task with script context (context is hidden from output)
+  const result = await engine.executeTask(task, {
     autoConfirm: options.yes || false,
     workingDir: options.dir || process.cwd(),
-    verbose: options.verbose !== false
+    verbose: options.verbose !== false,
+    context: scriptContext || undefined  // Pass as hidden context
   });
 
   // Show result

@@ -89,13 +89,17 @@ export class SmartTaskEngine {
     autoConfirm?: boolean;
     workingDir?: string;
     verbose?: boolean;
+    context?: string;  // Hidden context (e.g., knowledge base content) - not displayed but used by AI
   } = {}): Promise<SmartTaskResult> {
     const startTime = Date.now();
-    const { autoConfirm = false, workingDir = process.cwd(), verbose = true } = options;
+    const { autoConfirm = false, workingDir = process.cwd(), verbose = true, context = '' } = options;
+
+    // Combine goal with hidden context for AI processing
+    const fullGoal = context ? `${userGoal}\n\n${context}` : userGoal;
 
     // Initialize task state
     const state: TaskState = {
-      goal: userGoal,
+      goal: fullGoal,  // AI sees full context
       currentStep: 0,
       totalSteps: 0,
       actions: [],
