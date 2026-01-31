@@ -452,18 +452,32 @@ export class AutoExecuteStream {
     // Build script library context
     let scriptContext = '';
     if (relatedScripts && relatedScripts.length > 0) {
-      scriptContext = `\n\n## Marketplace Scripts:\n\n`;
+      scriptContext = `\n\n## 📜 Marketplace Scripts (FOLLOW THESE INSTRUCTIONS!):\n\n`;
       relatedScripts.forEach((script, index) => {
         scriptContext += `### Script ${index + 1}: ${script.name}\n`;
         scriptContext += `Description: ${script.description}\n`;
-        scriptContext += `Tags: ${script.tags.join(', ')}\n`;
-        scriptContext += `Commands:\n`;
-        script.commands.forEach((cmd: any, i: number) => {
-          scriptContext += `  ${i + 1}. ${cmd.description || cmd.command}\n`;
-        });
+        if (script.tags && script.tags.length > 0) {
+          scriptContext += `Tags: ${script.tags.join(', ')}\n`;
+        }
+
+        // Include document content if available (THIS IS THE MAIN GUIDE!)
+        const docContent = script.documentContent || script.document_content;
+        if (docContent) {
+          scriptContext += `\n**📖 Installation Guide (MUST FOLLOW):**\n`;
+          scriptContext += `\`\`\`\n${docContent}\n\`\`\`\n`;
+        }
+
+        // Include commands if available
+        if (script.commands && script.commands.length > 0) {
+          scriptContext += `\nCommands:\n`;
+          script.commands.forEach((cmd: any, i: number) => {
+            const cmdStr = typeof cmd === 'string' ? cmd : (cmd.command || cmd.description || cmd);
+            scriptContext += `  ${i + 1}. ${cmdStr}\n`;
+          });
+        }
         scriptContext += `\n`;
       });
-      scriptContext += `**Prefer using marketplace scripts - these are verified best practices.**\n`;
+      scriptContext += `**⚠️ IMPORTANT: You MUST follow the installation guide above step by step! Do not improvise.**\n`;
     }
 
     // Build internet search results
@@ -480,10 +494,12 @@ export class AutoExecuteStream {
     // Build knowledge base content
     let knowledgeContext = '';
     if (knowledgeBaseResults && knowledgeBaseResults.length > 0) {
-      knowledgeContext = `\n\n## 📚 Knowledge Base Match (Use this first!):\n\n`;
+      knowledgeContext = `\n\n## 📚 Knowledge Base Match (FOLLOW THIS GUIDE!):\n\n`;
       knowledgeBaseResults.forEach((kb, index) => {
         knowledgeContext += `### ${index + 1}. ${kb.name}\n`;
-        knowledgeContext += `**Description:**\n${typeof kb.content === 'string' ? kb.content.substring(0, 2000) : JSON.stringify(kb.content).substring(0, 2000)}\n\n`;
+        // Include full content, not truncated
+        const content = typeof kb.content === 'string' ? kb.content : JSON.stringify(kb.content);
+        knowledgeContext += `**📖 Guide Content:**\n\`\`\`\n${content}\n\`\`\`\n\n`;
         if (kb.commands && kb.commands.length > 0) {
           knowledgeContext += `**Predefined Commands:**\n`;
           kb.commands.forEach((cmd: string, i: number) => {
