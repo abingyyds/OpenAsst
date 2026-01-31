@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import chalk from 'chalk';
 import { configCommand } from './commands/config';
 import { aiCommand } from './commands/ai';
 import { marketListCommand, marketSearchCommand, marketRunCommand } from './commands/market';
@@ -24,9 +25,32 @@ import { scheduleListCommand, scheduleAddCommand, scheduleRemoveCommand, schedul
 
 const program = new Command();
 
+// Custom help formatting
+program.configureHelp({
+  sortSubcommands: true,
+  subcommandTerm: (cmd) => chalk.cyan(cmd.name()) + ' ' + chalk.gray(cmd.usage()),
+});
+
+// Custom help output
+program.addHelpText('beforeAll', `
+${chalk.green('╔═══════════════════════════════════════════════════════════╗')}
+${chalk.green('║')}  ${chalk.bold.white('OpenAsst CLI')} - ${chalk.gray('AI-powered terminal assistant')}        ${chalk.green('║')}
+${chalk.green('╚═══════════════════════════════════════════════════════════╝')}
+`);
+
+program.addHelpText('after', `
+${chalk.yellow('Examples:')}
+  ${chalk.gray('$')} ${chalk.cyan('openasst config')}          ${chalk.gray('# Configure API key')}
+  ${chalk.gray('$')} ${chalk.cyan('openasst do "install nginx"')} ${chalk.gray('# Execute task with AI')}
+  ${chalk.gray('$')} ${chalk.cyan('openasst assistant')}       ${chalk.gray('# Interactive mode')}
+  ${chalk.gray('$')} ${chalk.cyan('openasst market')}          ${chalk.gray('# Browse script marketplace')}
+
+${chalk.gray('Documentation: https://github.com/abingyyds/OpenAsst')}
+`);
+
 program
   .name('openasst')
-  .description('OpenAsst CLI - AI-powered terminal assistant')
+  .description(chalk.gray('AI-powered terminal assistant for deployment and system operations'))
   .version('1.0.0');
 
 // Config
