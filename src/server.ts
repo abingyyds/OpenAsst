@@ -728,6 +728,27 @@ app.get('/api/scripts', async (req, res) => {
   }
 });
 
+// 获取单个脚本
+app.get('/api/scripts/:id', async (req, res) => {
+  try {
+    const scriptId = req.params.id;
+    const { data, error } = await supabase
+      .from('script_templates')
+      .select('*')
+      .eq('id', scriptId)
+      .single();
+
+    if (error) {
+      console.error('获取脚本失败:', error);
+      return res.status(404).json({ error: '脚本不存在' });
+    }
+    res.json(data);
+  } catch (err) {
+    console.error('获取脚本失败:', err);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 app.get('/api/scripts/popular', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 5;
