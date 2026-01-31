@@ -2,11 +2,22 @@
 
 OpenAsst CLI is an AI-powered terminal assistant that helps you accomplish system tasks using natural language.
 
+## Quick Start
+
+**One-liner install:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+```
+
 ## Features
 
 - **Smart Task Engine** - Execute any task using natural language, AI automatically plans and executes commands
 - **Auto Error Recovery** - Intelligent error detection and automatic fixing
 - **Security Guard** - Built-in security checks to prevent dangerous operations
+- **API Sharing** - Share your AI API with other tools (Claude Code, Cursor, etc.)
+- **Skill System** - Install and manage skills to extend functionality
+- **Scheduled Tasks** - Create timers and scheduled automation
 - **Project Deployment** - Auto-deploy from documentation URLs or Git repositories
 - **Service Management** - Manage background services with ease
 - **Project Monitoring** - Monitor services with auto-restart capability
@@ -15,8 +26,17 @@ OpenAsst CLI is an AI-powered terminal assistant that helps you accomplish syste
 
 ## Installation
 
+### One-liner (Recommended)
+
 ```bash
-cd cli
+curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+```
+
+### Manual Installation
+
+```bash
+git clone https://github.com/abingyyds/OpenAsst.git
+cd OpenAsst/cli
 npm install
 npm run build
 npm link
