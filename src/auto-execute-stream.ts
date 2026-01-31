@@ -333,9 +333,14 @@ export class AutoExecuteStream {
             const log = await executor.execute(command);
             commandLogs.push({ ...log, explanation });
 
+            // Truncate output for display (keep full in logs)
+            const truncatedOutput = log.output.length > 500
+              ? log.output.substring(0, 500) + '\n... (output truncated)'
+              : log.output;
+
             this.sendEvent('command_output', {
               command: log.command,
-              output: log.output,
+              output: truncatedOutput,
               exitCode: log.exitCode,
               explanation
             });
@@ -354,9 +359,14 @@ export class AutoExecuteStream {
             };
             commandLogs.push(errorLog);
 
+            // Truncate error output for display
+            const truncatedError = errorLog.output.length > 500
+              ? errorLog.output.substring(0, 500) + '\n... (error truncated)'
+              : errorLog.output;
+
             this.sendEvent('command_output', {
               command: errorLog.command,
-              output: errorLog.output,
+              output: truncatedError,
               exitCode: errorLog.exitCode,
               explanation
             });
