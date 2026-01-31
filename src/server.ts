@@ -854,6 +854,9 @@ app.post('/api/scripts', (req, res) => {
   // Update statistics
   updateStatistics({ totalScripts: scripts.length });
 
+  // Auto sync to knowledge base
+  knowledgeManager.syncFromMarketplace();
+
   res.json(newScript);
 });
 
@@ -1342,6 +1345,13 @@ ${executionHistory.map((h, i) =>
 请分析整个执行过程，判断任务是否成功完成，并给出详细总结。如果失败，说明原因和建议。`;
 
     const finalSummary = await assistant.chat(finalSummaryPrompt, [], []);
+
+    // AI自动学习 - 执行成功后保存知识
+    if (taskCompleted) {
+      const allCommands = executionHistory.flatMap(h => h.commands || []);
+      const allResults = executionHistory.map(h => h.summary || '').join('\n');
+      knowledgeManager.learnFromExecution(task, allCommands, allResults, true);
+    }
 
     res.json({
       success: taskCompleted,
@@ -1979,4 +1989,20 @@ app.post('/api/knowledge/learn', (req, res) => {
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
+
+  // 定时同步知识库到GitHub (每小时)
+  setInterval(async () => {
+    try {
+      const result = await knowledgeManager.syncToGitHub();
+      if (result.success) {
+        console.log('[Auto Sync] Knowledge base synced to GitHub');
+      }
+    } catch (error) {
+      console.error('[Auto Sync] Failed:', error);
+    }
+  }, 60 * 60 * 1000); // 1 hour
+
+  // 启动时同步一次Marketplace到知识库
+  const synced = knowledgeManager.syncFromMarketplace();
+  console.log(`[Startup] Synced ${synced} items from marketplace to knowledge base`);
 });

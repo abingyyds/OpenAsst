@@ -4,16 +4,45 @@
     {
       "id": "deploy-001",
       "title": "Node.js deployment",
-      "keywords": ["nodejs", "npm", "pm2", "deploy"],
+      "keywords": [
+        "nodejs",
+        "npm",
+        "pm2",
+        "deploy"
+      ],
       "solution": "Deploy Node.js app:\n- npm install: Install dependencies\n- npm run build: Build project\n- pm2 start app.js: Start with PM2",
-      "commands": ["npm install", "npm run build", "pm2 start app.js"]
+      "commands": [
+        "npm install",
+        "npm run build",
+        "pm2 start app.js"
+      ]
     },
     {
       "id": "deploy-002",
       "title": "Nginx reverse proxy",
-      "keywords": ["nginx", "proxy", "reverse proxy"],
+      "keywords": [
+        "nginx",
+        "proxy",
+        "reverse proxy"
+      ],
       "solution": "Setup Nginx reverse proxy:\n1. Edit /etc/nginx/sites-available/default\n2. Add proxy_pass directive\n3. nginx -t && systemctl reload nginx",
-      "commands": ["nginx -t", "systemctl reload nginx"]
+      "commands": [
+        "nginx -t",
+        "systemctl reload nginx"
+      ]
+    },
+    {
+      "title": "Node.js 应用部署指南",
+      "keywords": [
+        "nodejs",
+        "deployment",
+        "production"
+      ],
+      "solution": "完整的 Node.js 应用部署流程文档，包含环境检查、依赖安装、构建和启动\n\n# Node.js 应用部署指南\n\n## 步骤 1: 检查 Node.js 环境\n\n首先检查系统是否安装了 Node.js：\n\n```bash\nnode --version\n```\n\n## 步骤 2: 检查 npm 版本\n\n确认 npm 包管理器可用：\n\n```bash\nnpm --version\n```\n\n## 步骤 3: 安装项目依赖\n\n进入项目目录并安装所有依赖包：\n\n```bash\nnpm install\n```\n\n## 步骤 4: 构建生产版本\n\n构建优化后的生产版本：\n\n```bash\nnpm run build\n```\n\n## 步骤 5: 启动应用\n\n使用 PM2 或直接启动应用：\n\n```bash\nnpm start\n```\n\n部署完成！",
+      "commands": [],
+      "createdAt": "2026-01-31T15:07:00.847Z",
+      "updatedAt": "2026-01-31T15:07:00.847Z",
+      "id": "deployment-1769872020847"
     }
   ]
 }
