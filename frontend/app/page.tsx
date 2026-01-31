@@ -22,6 +22,13 @@ const installCommands: Record<Platform, { label: string; command: string }> = {
 
 export default function Home() {
   const [platform, setPlatform] = useState<Platform>('unix')
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(installCommands[platform].command)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
   return (
     <main className="min-h-screen bg-[#0a0f0d] grid-pattern relative overflow-hidden">
       {/* Animated background gradient */}
@@ -116,10 +123,16 @@ export default function Home() {
               </button>
             ))}
           </div>
-          <div className="code-block p-4 flex items-center justify-between">
-            <code className="text-green-400 text-sm overflow-x-auto">
+          <div className="code-block p-4 flex items-center justify-between gap-4">
+            <code className="text-green-400 text-sm overflow-x-auto flex-1">
               {installCommands[platform].command}
             </code>
+            <button
+              onClick={handleCopy}
+              className="px-3 py-1 text-sm border border-green-900/50 text-green-400 rounded hover:bg-green-900/20 font-mono shrink-0 transition"
+            >
+              {copied ? 'copied!' : 'copy'}
+            </button>
           </div>
         </div>
 
