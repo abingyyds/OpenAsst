@@ -141,10 +141,26 @@ export class SearchService {
   }
 
   /**
+   * Check if API key is valid (not a placeholder)
+   */
+  private isValidApiKey(key: string | undefined): boolean {
+    if (!key) return false;
+    const placeholders = [
+      'your_tavily_api_key_here',
+      'your_serper_api_key_here',
+      'your_api_key_here',
+      'placeholder',
+      'xxx',
+      'your-api-key',
+    ];
+    return !placeholders.includes(key.toLowerCase()) && key.length > 10;
+  }
+
+  /**
    * Search internet using Tavily API
    */
   private async searchWithTavily(query: string): Promise<SearchResult[]> {
-    if (!this.tavilyApiKey) {
+    if (!this.isValidApiKey(this.tavilyApiKey)) {
       return [];
     }
 
@@ -172,7 +188,7 @@ export class SearchService {
    * Search internet using Serper API
    */
   private async searchWithSerper(query: string): Promise<SearchResult[]> {
-    if (!this.serperApiKey) {
+    if (!this.isValidApiKey(this.serperApiKey)) {
       return [];
     }
 
@@ -210,9 +226,9 @@ export class SearchService {
    * Search internet
    */
   async searchInternet(query: string): Promise<SearchResult[]> {
-    if (this.tavilyApiKey) {
+    if (this.isValidApiKey(this.tavilyApiKey)) {
       return await this.searchWithTavily(query);
-    } else if (this.serperApiKey) {
+    } else if (this.isValidApiKey(this.serperApiKey)) {
       return await this.searchWithSerper(query);
     }
     return [];
