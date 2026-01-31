@@ -108,7 +108,7 @@ export default function ScriptPreviewModal({ script, isOpen, onClose, onUse }: S
               <h3 className="text-sm font-mono text-green-500 mb-2"># commands</h3>
               <div className="bg-[#0a0f0d] border border-green-900/50 text-green-300 p-4 rounded font-mono text-sm overflow-x-auto">
                 {script.commands && script.commands.length > 0 ? (
-                  script.commands.map((cmd, index) => (
+                  script.commands.map((cmd: string, index: number) => (
                     <div key={index} className="mb-2 last:mb-0">
                       <span className="text-gray-600">$ </span>
                       <span className="text-[#00ff41]">{cmd}</span>
