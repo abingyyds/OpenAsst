@@ -152,4 +152,31 @@ export class Marketplace {
   getApiUrl(): string {
     return this.apiUrl;
   }
+
+  // Search scripts from API by keyword (auto-fetch)
+  async searchFromApi(keyword: string): Promise<CommandScript[]> {
+    try {
+      const response = await axios.get(`${this.apiUrl}/api/scripts/search`, {
+        params: { q: keyword },
+        timeout: 5000
+      });
+
+      if (response.data && Array.isArray(response.data)) {
+        return response.data.map((script: any) => ({
+          id: script.id || script._id,
+          name: script.name,
+          description: script.description,
+          commands: script.commands || [],
+          category: script.category || 'custom',
+          tags: script.tags || [],
+          documentContent: script.documentContent,
+          documentType: script.documentType
+        }));
+      }
+      return [];
+    } catch (error) {
+      // Fallback to local search if API fails
+      return this.search(keyword);
+    }
+  }
 }

@@ -749,6 +749,28 @@ app.get('/api/scripts/:id', async (req, res) => {
   }
 });
 
+// Search scripts by keyword
+app.get('/api/scripts/search', async (req, res) => {
+  try {
+    const keyword = (req.query.q as string || '').toLowerCase();
+    if (!keyword) {
+      return res.json([]);
+    }
+
+    const { data, error } = await supabase
+      .from('script_templates')
+      .select('*')
+      .or(`name.ilike.%${keyword}%,description.ilike.%${keyword}%`)
+      .limit(10);
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error('搜索脚本失败:', err);
+    res.json([]);
+  }
+});
+
 app.get('/api/scripts/popular', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 5;
@@ -1253,6 +1275,56 @@ app.post('/api/sessions/:serverId/auto-execute', async (req, res) => {
     // 获取系统信息
     const systemInfo = await executor.execute('uname -a && cat /etc/os-release 2>/dev/null || echo "OS info not available"');
 
+    // 搜索知识库和脚本库
+    let searchContext = '';
+    try {
+      // 提取搜索关键词
+      let searchQuery = task
+        .replace(/^Execute script:\s*/i, '')
+        .replace(/^执行脚本:\s*/i, '')
+        .replace(/安装教程|安装指南|installation guide/gi, '')
+        .trim();
+
+      // 搜索脚本市场
+      const marketplaceResults = await marketplaceManager.searchTemplates(searchQuery);
+      if (marketplaceResults.length > 0) {
+        const topScripts = marketplaceResults.slice(0, 3);
+        searchContext += '\n\n## 从脚本库找到的相关脚本：\n';
+        for (const script of topScripts) {
+          const docContent = (script as any).documentContent || '';
+          searchContext += `\n### ${script.name}\n`;
+          searchContext += `描述: ${script.description}\n`;
+          if (docContent) {
+            searchContext += `文档内容:\n${docContent.substring(0, 2000)}\n`;
+          }
+          if (script.commands && script.commands.length > 0) {
+            searchContext += `命令: ${script.commands.join('; ')}\n`;
+          }
+        }
+      }
+
+      // 搜索知识库和互联网
+      const allResults = await searchService.searchAll(searchQuery);
+      const kbResults = allResults.filter(r => r.source === 'knowledge-base').slice(0, 2);
+      const internetResults = allResults.filter(r => r.source === 'internet').slice(0, 3);
+
+      if (kbResults.length > 0) {
+        searchContext += '\n\n## 从知识库找到的相关内容：\n';
+        for (const result of kbResults) {
+          searchContext += `\n### ${result.title}\n${result.content.substring(0, 1000)}\n`;
+        }
+      }
+
+      if (internetResults.length > 0) {
+        searchContext += '\n\n## 从互联网搜索到的相关内容：\n';
+        for (const result of internetResults) {
+          searchContext += `\n### ${result.title}\n${result.content.substring(0, 500)}\n`;
+        }
+      }
+    } catch (searchError) {
+      console.error('Search failed:', searchError);
+    }
+
     const MAX_ITERATIONS = 10;
     const executionHistory: any[] = [];
     let currentIteration = 0;
@@ -1276,38 +1348,17 @@ app.post('/api/sessions/:serverId/auto-execute', async (req, res) => {
 
 系统信息：
 ${systemInfo.output}
+${searchContext}
 ${historyContext}
 
 请分析任务需求，生成下一步需要执行的shell命令。
 
-## 信息收集策略（第一轮必须先收集信息）：
-
-如果这是第一轮或需要更多信息，请使用以下方法收集信息：
-
-1. **搜索GitHub仓库**：
-   curl -s "https://api.github.com/search/repositories?q=软件名&sort=stars&order=desc" | jq -r '.items[0:3] | .[] | "\\(.full_name) - \\(.description) - Stars: \\(.stargazers_count)"'
-
-2. **搜索Python包（PyPI）**：
-   curl -s "https://pypi.org/pypi/包名/json" | jq -r '.info | "Name: \\(.name), Version: \\(.version), Summary: \\(.summary)"'
-
-3. **搜索npm包**：
-   curl -s "https://registry.npmjs.org/包名" | jq -r '"Name: \\(.name), Version: \\(."dist-tags".latest), Description: \\(.description)"'
-
-4. **搜索Docker镜像**：
-   curl -s "https://hub.docker.com/v2/repositories/library/镜像名/" | jq -r '"Name: \\(.name), Stars: \\(.star_count), Description: \\(.description)"'
-
-5. **检查系统包管理器**：
-   - CentOS/RHEL: yum search 软件名 || dnf search 软件名
-   - Ubuntu/Debian: apt-cache search 软件名
-   - 通用: which 软件名 || command -v 软件名
-
-6. **搜索多个GitHub仓库**：
-   curl -s "https://api.github.com/search/repositories?q=软件名+in:name,description&per_page=5" | jq -r '.items[] | "Repo: \\(.full_name)\\nStars: \\(.stargazers_count)\\nDesc: \\(.description)\\nClone: \\(.clone_url)\\n"'
+**重要**：如果上面有"从脚本库找到的相关脚本"或"从知识库找到的相关内容"，请优先参考这些内容来执行任务，这些是经过验证的解决方案。
 
 ## 执行策略：
 
-1. **第一轮**：必须先收集信息，确认软件来源
-2. **后续轮次**：根据收集到的信息执行安装
+1. **优先使用已有知识**：如果脚本库或知识库有相关内容，直接使用
+2. **信息收集**：如果没有找到相关内容，再通过命令收集信息
 3. **验证**：安装后验证是否成功
 
 请以JSON格式返回：

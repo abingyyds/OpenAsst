@@ -26,12 +26,12 @@ export async function doCommand(task: string, options: DoOptions): Promise<void>
   Logger.info('  SMART TASK ENGINE');
   Logger.info('========================================\n');
 
-  // Check marketplace for relevant scripts
-  const relevantScripts = marketplace.search(task);
+  // Auto-fetch relevant scripts from API
+  const relevantScripts = await marketplace.searchFromApi(task);
   let scriptContext = '';
 
   if (relevantScripts.length > 0) {
-    Logger.info(`Found ${relevantScripts.length} relevant script(s) in marketplace:\n`);
+    Logger.info(`Found ${relevantScripts.length} relevant script(s):\n`);
 
     relevantScripts.forEach((script, i) => {
       Logger.info(`  [${i + 1}] ${script.name}: ${script.description}`);
