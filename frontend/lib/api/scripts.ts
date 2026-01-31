@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { getApiHeaders } from '../api-config'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
@@ -65,32 +66,35 @@ export const scriptApi = {
     return response.json()
   },
 
-  async execute(scriptId: string, serverId: string, parameters?: Record<string, any>): Promise<ScriptExecutionResult> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 330000); // 5.5 minutes (slightly longer than backend timeout)
+  async execute(scriptId: string, serverId: string, parameters?: Record<string, any>, signal?: AbortSignal): Promise<ScriptExecutionResult> {
+    const timeoutId = setTimeout(() => {
+      // Only abort if no external signal provided
+      if (!signal) throw new Error('Script execution timeout')
+    }, 330000);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/scripts/${scriptId}/execute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getApiHeaders(),
         },
         body: JSON.stringify({ serverId, parameters }),
-        signal: controller.signal,
+        signal: signal,
       })
 
       clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || '脚本执行失败');
+        throw new Error(errorData.error || 'Script execution failed');
       }
 
       return response.json()
     } catch (error: any) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
-        throw new Error('脚本执行超时，请检查服务器连接');
+        throw error; // Re-throw AbortError for caller to handle
       }
       throw error;
     }

@@ -16,20 +16,39 @@ export class ClaudeAssistant {
     this.searchService = searchService;
   }
 
+  // Language instruction mapping
+  private getLanguageInstruction(language?: string): string {
+    const languageInstructions: { [key: string]: string } = {
+      'en': 'Respond in English.',
+      'zh': 'Respond in Chinese (中文回复).',
+      'ja': 'Respond in Japanese (日本語で回答してください).',
+      'ko': 'Respond in Korean (한국어로 답변해 주세요).',
+      'es': 'Respond in Spanish (Responde en español).',
+      'fr': 'Respond in French (Répondez en français).',
+      'de': 'Respond in German (Antworten Sie auf Deutsch).',
+      'ru': 'Respond in Russian (Отвечайте на русском языке).',
+    };
+    return language ? languageInstructions[language] || '' : '';
+  }
+
   async chat(
     userMessage: string,
     conversationHistory: ChatMessage[],
-    commandHistory: ExecutionLog[]
+    commandHistory: ExecutionLog[],
+    language?: string
   ): Promise<string> {
     try {
-      const systemPrompt = `你是一个服务器运维助手。你可以帮助用户：
-1. 分析命令执行错误并提供解决方案
-2. 解释命令的作用和风险
-3. 回答关于服务器管理的问题
+      const langInstruction = this.getLanguageInstruction(language);
+      const systemPrompt = `You are a server operations assistant. ${langInstruction}
 
-当前会话的命令历史：
+You can help users with:
+1. Analyzing command execution errors and providing solutions
+2. Explaining command functions and risks
+3. Answering questions about server management
+
+Current session command history:
 ${commandHistory.slice(-5).map(log =>
-  `命令: ${log.command}\n输出: ${log.output || log.error}\n退出码: ${log.exitCode}`
+  `Command: ${log.command}\nOutput: ${log.output || log.error}\nExit code: ${log.exitCode}`
 ).join('\n\n')}`;
 
       const messages: Anthropic.MessageParam[] = conversationHistory
@@ -76,12 +95,13 @@ ${commandHistory.slice(-5).map(log =>
   async chatWithSearch(
     userMessage: string,
     conversationHistory: ChatMessage[],
-    commandHistory: ExecutionLog[]
+    commandHistory: ExecutionLog[],
+    language?: string
   ): Promise<string> {
     try {
       // 如果没有配置搜索服务，使用普通聊天
       if (!this.searchService) {
-        return this.chat(userMessage, conversationHistory, commandHistory);
+        return this.chat(userMessage, conversationHistory, commandHistory, language);
       }
 
       // 第一步：让AI判断是否需要搜索
@@ -136,7 +156,7 @@ ${commandHistory.slice(-5).map(log =>
       }
 
       // 第三步：结合搜索结果生成回答
-      return this.chat(userMessage + searchContext, conversationHistory, commandHistory);
+      return this.chat(userMessage + searchContext, conversationHistory, commandHistory, language);
     } catch (error: any) {
       console.error('智能聊天失败:', error);
 
@@ -147,23 +167,27 @@ ${commandHistory.slice(-5).map(log =>
 
       // 其他错误，尝试降级
       console.log('尝试降级到普通聊天...');
-      return this.chat(userMessage, conversationHistory, commandHistory);
+      return this.chat(userMessage, conversationHistory, commandHistory, language);
     }
   }
 
   async *chatStream(
     userMessage: string,
     conversationHistory: ChatMessage[],
-    commandHistory: ExecutionLog[]
+    commandHistory: ExecutionLog[],
+    language?: string
   ): AsyncGenerator<string, void, unknown> {
-    const systemPrompt = `你是一个服务器运维助手。你可以帮助用户：
-1. 分析命令执行错误并提供解决方案
-2. 解释命令的作用和风险
-3. 回答关于服务器管理的问题
+    const langInstruction = this.getLanguageInstruction(language);
+    const systemPrompt = `You are a server operations assistant. ${langInstruction}
 
-当前会话的命令历史：
+You can help users with:
+1. Analyzing command execution errors and providing solutions
+2. Explaining command functions and risks
+3. Answering questions about server management
+
+Current session command history:
 ${commandHistory.slice(-5).map(log =>
-  `命令: ${log.command}\n输出: ${log.output || log.error}\n退出码: ${log.exitCode}`
+  `Command: ${log.command}\nOutput: ${log.output || log.error}\nExit code: ${log.exitCode}`
 ).join('\n\n')}`;
 
     const messages: Anthropic.MessageParam[] = conversationHistory

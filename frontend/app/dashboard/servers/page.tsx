@@ -67,84 +67,86 @@ export default function ServersPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">加载中...</div>
+    return <div className="text-center py-12 text-green-500 font-mono">loading...</div>
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">连接管理</h1>
+        <h1 className="text-3xl font-bold text-white">{'>'} Servers</h1>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 font-mono btn-glow"
         >
-          + 添加连接
+          + add_server
         </button>
       </div>
 
-      {/* 搜索和排序栏 */}
+      {/* Search and Sort Bar */}
       {servers.length > 0 && (
         <div className="mb-6 flex gap-4">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜索服务器名称或地址..."
-            className="flex-1 px-4 py-2 border rounded"
+            placeholder="search servers..."
+            className="flex-1 px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
           />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'name' | 'status')}
-            className="px-4 py-2 border rounded"
+            className="px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-400 font-mono focus:outline-none focus:border-green-500"
           >
-            <option value="name">按名称排序</option>
-            <option value="status">按状态排序</option>
+            <option value="name">sort: name</option>
+            <option value="status">sort: status</option>
           </select>
         </div>
       )}
 
       {servers.length === 0 ? (
-        <div className="bg-white p-12 rounded-lg shadow text-center">
-          <p className="text-gray-500 mb-4">还没有添加服务器</p>
+        <div className="terminal-card p-12 text-center">
+          <p className="text-gray-500 mb-4 font-mono">no servers configured</p>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 font-mono btn-glow"
           >
-            添加第一台服务器
+            + add_first_server
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredServers.map(server => (
-            <div key={server.id} className="relative">
+            <div key={server.id} className="relative group">
               <Link href={`/dashboard/servers/${server.id}`}>
-                <div className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition cursor-pointer">
-                  <h3 className="font-bold text-lg mb-2">{server.name}</h3>
-                  <p className="text-sm text-gray-600 mb-2">{server.host}:{server.port}</p>
+                <div className="terminal-card p-6 hover:border-green-500/50 transition cursor-pointer">
+                  <h3 className="font-bold text-lg mb-2 text-green-400 font-mono">{server.name}</h3>
+                  <p className="text-sm text-gray-500 mb-2 font-mono">{server.host}:{server.port}</p>
                   <div className="flex items-center gap-2">
                     <span className={`w-2 h-2 rounded-full ${
-                      server.status === 'connected' ? 'bg-green-500' : 'bg-gray-400'
+                      server.status === 'connected' ? 'bg-green-400 status-online' : 'bg-gray-600'
                     }`}></span>
-                    <span className="text-sm text-gray-500">{server.status}</span>
+                    <span className={`text-sm font-mono ${
+                      server.status === 'connected' ? 'text-green-500' : 'text-gray-500'
+                    }`}>{server.status}</span>
                   </div>
                 </div>
               </Link>
               <button
                 onClick={(e) => handleDelete(server.id, server.name, e)}
-                className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded hover:bg-red-700 transition-opacity"
-                title="删除服务器"
+                className="absolute top-2 right-2 p-2 bg-red-900/50 text-red-400 rounded hover:bg-red-800 transition-opacity opacity-0 group-hover:opacity-100"
+                title="Delete server"
               >
-                🗑️
+                x
               </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* 显示搜索结果为空的提示 */}
+      {/* Empty search results */}
       {servers.length > 0 && filteredServers.length === 0 && (
-        <div className="bg-white p-12 rounded-lg shadow text-center">
-          <p className="text-gray-500">没有找到匹配的服务器</p>
+        <div className="terminal-card p-12 text-center">
+          <p className="text-gray-500 font-mono">no matching servers found</p>
         </div>
       )}
 

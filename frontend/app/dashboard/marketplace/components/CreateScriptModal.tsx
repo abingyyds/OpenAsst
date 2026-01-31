@@ -14,12 +14,9 @@ export default function CreateScriptModal({ isOpen, onClose, onSuccess }: Create
     name: '',
     description: '',
     category: 'custom' as 'deployment' | 'maintenance' | 'monitoring' | 'docker' | 'security' | 'backup' | 'network' | 'custom',
-    commands: '',
     tags: '',
     isPublic: true,
-    mode: 'commands' as 'commands' | 'document',
-    documentContent: '',
-    documentType: 'markdown' as 'markdown' | 'text'
+    documentContent: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -57,21 +54,9 @@ export default function CreateScriptModal({ isOpen, onClose, onSuccess }: Create
         tags: tagsArray,
         author: userInfo.author,
         authorId: userInfo.authorId,
-        isPublic: formData.isPublic
-      }
-
-      // 根据模式添加不同的内容
-      if (formData.mode === 'document') {
-        scriptData.documentContent = formData.documentContent
-        scriptData.documentType = formData.documentType
-        scriptData.commands = [] // 文档模式下命令为空数组
-      } else {
-        // 将命令字符串转换为数组
-        const commandsArray = formData.commands
-          .split('\n')
-          .filter(cmd => cmd.trim())
-          .map(cmd => cmd.trim())
-        scriptData.commands = commandsArray
+        isPublic: formData.isPublic,
+        documentContent: formData.documentContent,
+        commands: []
       }
 
       const response = await fetch('http://localhost:3002/api/scripts', {
@@ -90,12 +75,9 @@ export default function CreateScriptModal({ isOpen, onClose, onSuccess }: Create
         name: '',
         description: '',
         category: 'custom',
-        commands: '',
         tags: '',
         isPublic: true,
-        mode: 'commands',
-        documentContent: '',
-        documentType: 'markdown'
+        documentContent: ''
       })
     } catch (err) {
       setError('创建脚本失败，请检查信息后重试')
@@ -106,148 +88,97 @@ export default function CreateScriptModal({ isOpen, onClose, onSuccess }: Create
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-4">创建脚本模板</h2>
+    <div className="fixed inset-0 bg-black/80 flex items-start justify-center z-50 p-4 overflow-y-auto">
+      <div className="terminal-card p-6 w-full max-w-2xl my-8 relative">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-500 hover:text-green-400 font-mono text-xl"
+        >
+          ×
+        </button>
+        <h2 className="text-2xl font-bold mb-4 text-green-400 font-mono"># Create Script</h2>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">
-            {error}
+          <div className="bg-red-900/30 border border-red-500/50 text-red-400 p-3 rounded mb-4 text-sm font-mono">
+            [ERROR] {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">脚本名称</label>
+            <label className="block text-sm font-mono text-green-500 mb-2">name:</label>
             <input
               type="text"
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
-              placeholder="例如：部署Node.js应用"
+              className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+              placeholder="e.g. deploy-nodejs-app"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">描述</label>
+            <label className="block text-sm font-mono text-green-500 mb-2">description:</label>
             <textarea
               required
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-3 py-2 border rounded h-20"
-              placeholder="描述这个脚本的功能..."
+              className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono h-20 focus:outline-none focus:border-green-500 placeholder-gray-600"
+              placeholder="describe what this script does..."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">分类</label>
+            <label className="block text-sm font-mono text-green-500 mb-2">category:</label>
             <select
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
             >
-              <option value="deployment">部署</option>
-              <option value="maintenance">维护</option>
-              <option value="monitoring">监控</option>
-              <option value="docker">Docker</option>
-              <option value="security">安全</option>
-              <option value="backup">备份</option>
-              <option value="network">网络</option>
-              <option value="custom">自定义</option>
+              <option value="deployment">deploy</option>
+              <option value="maintenance">maintain</option>
+              <option value="monitoring">monitor</option>
+              <option value="docker">docker</option>
+              <option value="security">security</option>
+              <option value="backup">backup</option>
+              <option value="network">network</option>
+              <option value="custom">custom</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">内容模式</label>
-            <div className="flex gap-4 mb-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="mode"
-                  value="commands"
-                  checked={formData.mode === 'commands'}
-                  onChange={(e) => setFormData({ ...formData, mode: 'commands' })}
-                  className="w-4 h-4"
-                />
-                <span className="text-sm">命令模式</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="mode"
-                  value="document"
-                  checked={formData.mode === 'document'}
-                  onChange={(e) => setFormData({ ...formData, mode: 'document' })}
-                  className="w-4 h-4"
-                />
-                <span className="text-sm">文档模式</span>
-              </label>
-            </div>
-            <p className="text-xs text-gray-500">
-              {formData.mode === 'commands'
-                ? '命令模式：输入要执行的命令列表'
-                : '文档模式：编写完整的操作文档，AI将读取并执行'}
+            <label className="block text-sm font-mono text-green-500 mb-2">document:</label>
+            <textarea
+              required
+              value={formData.documentContent}
+              onChange={(e) => setFormData({ ...formData, documentContent: e.target.value })}
+              className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono text-sm h-48 focus:outline-none focus:border-green-500 placeholder-gray-600"
+              placeholder="# Deploy Guide&#10;&#10;## Step 1: Setup&#10;npm install&#10;&#10;## Step 2: Build&#10;npm run build"
+            />
+            <p className="text-xs text-gray-600 mt-1 font-mono">
+              AI will read document and execute operations accordingly
             </p>
           </div>
 
-          {formData.mode === 'commands' ? (
-            <div>
-              <label className="block text-sm font-medium mb-1">命令（每行一个）</label>
-              <textarea
-                required
-                value={formData.commands}
-                onChange={(e) => setFormData({ ...formData, commands: e.target.value })}
-                className="w-full px-3 py-2 border rounded h-32 font-mono text-sm"
-                placeholder="ls -la&#10;pwd&#10;echo 'Hello World'"
-              />
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-sm font-medium">文档内容</label>
-                <select
-                  value={formData.documentType}
-                  onChange={(e) => setFormData({ ...formData, documentType: e.target.value as 'markdown' | 'text' })}
-                  className="text-xs px-2 py-1 border rounded"
-                >
-                  <option value="markdown">Markdown</option>
-                  <option value="text">纯文本</option>
-                </select>
-              </div>
-              <textarea
-                required
-                value={formData.documentContent}
-                onChange={(e) => setFormData({ ...formData, documentContent: e.target.value })}
-                className="w-full px-3 py-2 border rounded h-64 font-mono text-sm"
-                placeholder={formData.documentType === 'markdown'
-                  ? "# 部署指南\n\n## 步骤1：准备环境\n\n```bash\nnpm install\n```\n\n## 步骤2：构建项目\n\n```bash\nnpm run build\n```"
-                  : "部署指南\n\n步骤1：准备环境\nnpm install\n\n步骤2：构建项目\nnpm run build"}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                AI将读取文档内容并根据描述执行相应操作
-              </p>
-            </div>
-          )}
-
           <div>
-            <label className="block text-sm font-medium mb-1">标签（用逗号分隔）</label>
+            <label className="block text-sm font-mono text-green-500 mb-2">tags: (comma separated)</label>
             <input
               type="text"
               value={formData.tags}
               onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
-              placeholder="例如：linux, 部署, 自动化"
+              className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+              placeholder="e.g. linux, deploy, automation"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">作者</label>
+            <label className="block text-sm font-mono text-green-500 mb-2">author:</label>
             <input
               type="text"
               value={userInfo.author}
               disabled
-              className="w-full px-3 py-2 border rounded bg-gray-50 text-gray-600"
+              className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-gray-500 font-mono"
             />
           </div>
 
@@ -257,10 +188,10 @@ export default function CreateScriptModal({ isOpen, onClose, onSuccess }: Create
               id="isPublic"
               checked={formData.isPublic}
               onChange={(e) => setFormData({ ...formData, isPublic: e.target.checked })}
-              className="w-4 h-4"
+              className="w-4 h-4 accent-green-500"
             />
-            <label htmlFor="isPublic" className="text-sm font-medium">
-              公开脚本（其他用户可以看到和使用）
+            <label htmlFor="isPublic" className="text-sm font-mono text-green-400">
+              public (visible to other users)
             </label>
           </div>
 
@@ -268,17 +199,17 @@ export default function CreateScriptModal({ isOpen, onClose, onSuccess }: Create
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
+              className="flex-1 px-4 py-2 border border-green-900/50 text-gray-400 rounded hover:bg-green-900/20 font-mono"
               disabled={loading}
             >
-              取消
+              cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 disabled:opacity-50 font-mono btn-glow"
               disabled={loading}
             >
-              {loading ? '创建中...' : '创建'}
+              {loading ? 'creating...' : '> create'}
             </button>
           </div>
         </form>

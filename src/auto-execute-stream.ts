@@ -2,19 +2,71 @@ import { Response } from 'express';
 import { ConnectionManager } from './connection-manager';
 import { ClaudeAssistant } from './claude-assistant';
 import { MarketplaceManager } from './marketplace-manager';
+import { SearchService } from './search-service';
 import { ServerConfig } from './types';
+import axios from 'axios';
+
+const KNOWLEDGE_BASE_URL = 'https://raw.githubusercontent.com/abingyyds/OpenAsst/main/knowledge';
 
 export class AutoExecuteStream {
   constructor(
     private connectionManager: ConnectionManager,
     private assistant: ClaudeAssistant,
     private res: Response,
-    private marketplaceManager: MarketplaceManager
+    private marketplaceManager: MarketplaceManager,
+    private searchService?: SearchService
   ) {
     // 设置SSE响应头
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
+  }
+
+  // 从GitHub获取知识库
+  private async fetchKnowledgeBase(query: string): Promise<any[]> {
+    try {
+      // 获取知识库索引
+      const indexUrl = `${KNOWLEDGE_BASE_URL}/index.json`;
+      const indexRes = await axios.get(indexUrl, { timeout: 5000 });
+      const index = indexRes.data;
+
+      const results: any[] = [];
+      const queryLower = query.toLowerCase();
+
+      // 遍历所有知识库文件
+      for (const file of index.files || []) {
+        try {
+          const contentUrl = `${KNOWLEDGE_BASE_URL}/${file}`;
+          const contentRes = await axios.get(contentUrl, { timeout: 5000 });
+          const data = contentRes.data;
+
+          // 搜索 items 数组中的匹配项
+          for (const item of data.items || []) {
+            const titleMatch = item.title?.toLowerCase().includes(queryLower);
+            const keywordMatch = item.keywords?.some((k: string) =>
+              k.toLowerCase().includes(queryLower) || queryLower.includes(k.toLowerCase())
+            );
+            const solutionMatch = item.solution?.toLowerCase().includes(queryLower);
+
+            if (titleMatch || keywordMatch || solutionMatch) {
+              results.push({
+                name: item.title,
+                content: item.solution,
+                commands: item.commands || [],
+                category: data.category
+              });
+            }
+          }
+        } catch (e) {
+          console.error(`Failed to fetch ${file}:`, e);
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Failed to fetch knowledge base:', error);
+      return [];
+    }
   }
 
   private sendEvent(type: string, data: any) {
@@ -73,14 +125,18 @@ export class AutoExecuteStream {
     const verifyCmd = this.getVerificationCommand(task);
 
     if (!verifyCmd) {
-      return { verified: true, output: '无法自动验证，假定完成' };
+      // Cannot auto-verify - do NOT assume complete, force AI to continue
+      return { verified: false, output: 'Cannot auto-verify, task may not be complete' };
     }
 
-    this.sendEvent('status', { message: '正在验证任务是否完成...' });
+    this.sendEvent('status', { message: 'Verifying task completion...' });
 
     try {
       const log = await executor.execute(verifyCmd);
-      const success = log.exitCode === 0 && !log.output.includes('not found') && !log.output.includes('未安装');
+      const success = log.exitCode === 0 &&
+        !log.output.includes('not found') &&
+        !log.output.includes('command not found') &&
+        !log.output.includes('未安装');
 
       this.sendEvent('verification', {
         command: verifyCmd,
@@ -94,14 +150,14 @@ export class AutoExecuteStream {
     }
   }
 
-  async execute(serverConfig: ServerConfig, task: string, systemInfo: any) {
-    const MAX_ITERATIONS = 10;
+  async execute(serverConfig: ServerConfig, task: string, systemInfo: any, language?: string) {
+    const MAX_ITERATIONS = 15;
     const executionHistory: any[] = [];
     let currentIteration = 0;
     let taskCompleted = false;
-    let hasExecutedInstall = false; // 追踪是否执行过实际安装命令
+    let hasExecutedInstall = false;
 
-    this.sendEvent('start', { task, message: '开始自动执行...' });
+    this.sendEvent('start', { task, message: 'Starting auto-execution...' });
 
     try {
       // 获取执行器
@@ -121,19 +177,44 @@ export class AutoExecuteStream {
             ).join('\n\n')}`
           : '';
 
-        // 第一轮后查询脚本库
+        // 第一轮就查询所有知识来源
         let relatedScripts: any[] = [];
-        if (currentIteration === 2) {
-          this.sendEvent('status', { message: '正在查询脚本库...' });
+        let internetSearchResults: any[] = [];
+        let knowledgeBaseResults: any[] = [];
+
+        if (currentIteration === 1) {
           const softwareName = task.replace(/安装|install|部署|deploy/gi, '').trim();
+
+          // 1. 优先查询命令市场
+          this.sendEvent('status', { message: 'Searching marketplace...' });
           relatedScripts = this.marketplaceManager.searchTemplates(softwareName);
           if (relatedScripts.length > 0) {
-            this.sendEvent('status', { message: `找到 ${relatedScripts.length} 个相关脚本` });
+            this.sendEvent('status', { message: `Found ${relatedScripts.length} scripts in marketplace` });
+          }
+
+          // 2. 查询远程知识库
+          this.sendEvent('status', { message: 'Fetching knowledge base...' });
+          knowledgeBaseResults = await this.fetchKnowledgeBase(softwareName);
+          if (knowledgeBaseResults.length > 0) {
+            this.sendEvent('status', { message: `Found ${knowledgeBaseResults.length} knowledge entries` });
+          }
+
+          // 3. 如果本地没找到，搜索互联网
+          if (relatedScripts.length === 0 && knowledgeBaseResults.length === 0 && this.searchService) {
+            this.sendEvent('status', { message: 'Searching internet...' });
+            try {
+              internetSearchResults = await this.searchService.searchInternet(task);
+              if (internetSearchResults.length > 0) {
+                this.sendEvent('status', { message: `Found ${internetSearchResults.length} results from internet` });
+              }
+            } catch (error) {
+              console.error('Internet search failed:', error);
+            }
           }
         }
 
-        // AI分析
-        this.sendEvent('status', { message: 'AI正在分析任务...' });
+        // AI analysis
+        this.sendEvent('status', { message: 'AI analyzing task...' });
 
         const planPrompt = this.buildPrompt(
           task,
@@ -142,7 +223,10 @@ export class AutoExecuteStream {
           currentIteration,
           relatedScripts,
           executionHistory,
-          hasExecutedInstall
+          hasExecutedInstall,
+          internetSearchResults,
+          knowledgeBaseResults,
+          language
         );
         const planResponse = await this.assistant.chat(planPrompt, [], []);
 
@@ -298,14 +382,17 @@ export class AutoExecuteStream {
     iteration: number,
     relatedScripts?: any[],
     executionHistory?: any[],
-    hasExecutedInstall?: boolean
+    hasExecutedInstall?: boolean,
+    internetSearchResults?: any[],
+    knowledgeBaseResults?: any[],
+    language?: string
   ): string {
     const isFirstIteration = iteration === 1;
 
     // 提取软件名称（去掉"安装"等词）
     const softwareName = task.replace(/安装|install|部署|deploy/gi, '').trim();
 
-    // 检查上一轮是否有失败的命令
+    // Check if last iteration had failed commands
     let hasErrors = false;
     let errorAnalysis = '';
     if (executionHistory && executionHistory.length > 0) {
@@ -314,125 +401,189 @@ export class AutoExecuteStream {
 
       if (failedCommands.length > 0) {
         hasErrors = true;
-        errorAnalysis = `\n\n## ⚠️ 上一轮执行失败，需要修复！\n\n`;
-        errorAnalysis += `失败的命令：\n`;
+        errorAnalysis = `\n\n## ⚠️ Previous iteration failed, needs fix!\n\n`;
+        errorAnalysis += `Failed commands:\n`;
         failedCommands.forEach((log: any) => {
-          errorAnalysis += `- 命令: ${log.command}\n`;
-          errorAnalysis += `  错误: ${log.output}\n`;
-          errorAnalysis += `  退出码: ${log.exitCode}\n\n`;
+          errorAnalysis += `- Command: ${log.command}\n`;
+          errorAnalysis += `  Error: ${log.output}\n`;
+          errorAnalysis += `  Exit code: ${log.exitCode}\n\n`;
         });
-        errorAnalysis += `**你必须分析这些错误，并尝试不同的方法来解决问题。不要重复相同的失败命令！**\n`;
+        errorAnalysis += `**You must analyze these errors and try different approaches. Do not repeat the same failed commands!**\n`;
       }
     }
 
-    // 构建脚本库信息
+    // Build script library context
     let scriptContext = '';
     if (relatedScripts && relatedScripts.length > 0) {
-      scriptContext = `\n\n## 脚本库中的相关脚本：\n\n`;
+      scriptContext = `\n\n## Marketplace Scripts:\n\n`;
       relatedScripts.forEach((script, index) => {
-        scriptContext += `### 脚本${index + 1}: ${script.name}\n`;
-        scriptContext += `描述: ${script.description}\n`;
-        scriptContext += `标签: ${script.tags.join(', ')}\n`;
-        scriptContext += `命令步骤:\n`;
+        scriptContext += `### Script ${index + 1}: ${script.name}\n`;
+        scriptContext += `Description: ${script.description}\n`;
+        scriptContext += `Tags: ${script.tags.join(', ')}\n`;
+        scriptContext += `Commands:\n`;
         script.commands.forEach((cmd: any, i: number) => {
           scriptContext += `  ${i + 1}. ${cmd.description || cmd.command}\n`;
         });
         scriptContext += `\n`;
       });
-      scriptContext += `**优先考虑使用脚本库中的脚本，这些是经过验证的最佳实践。**\n`;
+      scriptContext += `**Prefer using marketplace scripts - these are verified best practices.**\n`;
     }
 
-    return `你是一个Linux系统管理专家。用户需要完成以下任务：
+    // Build internet search results
+    let internetContext = '';
+    if (internetSearchResults && internetSearchResults.length > 0) {
+      internetContext = `\n\n## 🌐 Internet Search Results:\n\n`;
+      internetSearchResults.slice(0, 5).forEach((result, index) => {
+        internetContext += `### ${index + 1}. ${result.title}\n`;
+        internetContext += `${result.content?.substring(0, 500) || 'No content'}\n\n`;
+      });
+      internetContext += `**Use the search results above to complete the task.**\n`;
+    }
 
-任务：${task}
+    // Build knowledge base content
+    let knowledgeContext = '';
+    if (knowledgeBaseResults && knowledgeBaseResults.length > 0) {
+      knowledgeContext = `\n\n## 📚 Knowledge Base Match (Use this first!):\n\n`;
+      knowledgeBaseResults.forEach((kb, index) => {
+        knowledgeContext += `### ${index + 1}. ${kb.name}\n`;
+        knowledgeContext += `**Description:**\n${typeof kb.content === 'string' ? kb.content.substring(0, 2000) : JSON.stringify(kb.content).substring(0, 2000)}\n\n`;
+        if (kb.commands && kb.commands.length > 0) {
+          knowledgeContext += `**Predefined Commands:**\n`;
+          kb.commands.forEach((cmd: string, i: number) => {
+            knowledgeContext += `${i + 1}. \`${cmd}\`\n`;
+          });
+          knowledgeContext += `\n`;
+        }
+      });
+      knowledgeContext += `**⚠️ Follow the knowledge base steps and commands strictly!**\n`;
+    }
 
-系统信息：
+    // Language instruction mapping
+    const languageInstructions: { [key: string]: string } = {
+      'en': 'Respond in English.',
+      'zh': 'Respond in Chinese (中文回复).',
+      'ja': 'Respond in Japanese (日本語で回答してください).',
+      'ko': 'Respond in Korean (한국어로 답변해 주세요).',
+      'es': 'Respond in Spanish (Responde en español).',
+      'fr': 'Respond in French (Répondez en français).',
+      'de': 'Respond in German (Antworten Sie auf Deutsch).',
+      'ru': 'Respond in Russian (Отвечайте на русском языке).',
+    };
+    const langInstruction = language ? languageInstructions[language] || '' : '';
+
+    return `You are a Linux system administration expert. ${langInstruction}
+
+User needs to complete the following task:
+
+Task: ${task}
+
+System Info:
 ${systemInfo.output}
 ${historyContext}
 ${errorAnalysis}
 ${scriptContext}
+${knowledgeContext}
+${internetContext}
 
 ${hasErrors ? `
-## 🔄 错误恢复模式
+## 🔄 Error Recovery Mode - KEEP TRYING!
 
-上一轮执行失败了！你需要：
-1. **分析错误原因**：仔细阅读错误信息，理解为什么失败
-2. **尝试不同的方法**：
-   - 如果是权限问题，尝试使用sudo
-   - 如果是包不存在，尝试其他包管理器或源
-   - 如果是依赖问题，先安装依赖
-   - 如果是网络问题，尝试其他下载源
-3. **不要重复失败的命令**：必须改变策略
-4. **考虑替代方案**：如果一种方法不行，尝试完全不同的方法
+Previous iteration failed! **DO NOT GIVE UP** - try a different approach:
 
-**常见错误恢复策略：**
-- 权限错误 → 使用sudo
-- 包不存在 → 更新包索引（apt update / yum update）或添加仓库
-- 依赖缺失 → 先安装依赖包
-- 命令不存在 → 先安装包含该命令的包
-- 网络超时 → 更换镜像源或使用代理
+1. **Analyze the error**: Read error messages carefully
+2. **Try COMPLETELY DIFFERENT approaches**:
+   - If official script fails → try manual installation
+   - If package manager fails → try compiling from source
+   - If version incompatible → try different version (e.g., Node.js 18 instead of 22)
+   - If dependency missing → install compatible version or use alternative tool
+   - If glibc/library error → downgrade software version or use container
+3. **Do not repeat failed commands**: Change strategy completely
+4. **Never set is_final_step to true if task is not actually complete**
+
+**Common recovery strategies:**
+- glibc/library version error → use older compatible version (e.g., nvm install 18 instead of 22)
+- Permission error → use sudo
+- Package not found → try alternative package managers (apt/yum/brew/snap)
+- Dependency conflict → use version manager (nvm, pyenv, etc.)
+- Build fails → check if pre-built binaries available
+- Network timeout → try different mirrors or proxy
+
+**IMPORTANT**: Keep trying until the task is ACTUALLY COMPLETE. Do not stop just because one approach failed.
 ` : isFirstIteration ? `
-## 第一轮：检查系统状态
+## First Iteration: Check System Status
 
-这是第一轮，你需要：
-1. 使用你的知识判断如何安装/配置 ${softwareName}
-2. 只执行必要的系统检查命令（检查是否已安装、系统版本等）
-3. 不要执行搜索命令（不要curl GitHub/PyPI/npm等）
+This is the first iteration, you need to:
+1. Use your knowledge to determine how to install/configure ${softwareName}
+2. Only run necessary system check commands (check if installed, system version, etc.)
+3. Do not run search commands (no curl to GitHub/PyPI/npm etc.)
 
-### 第一轮应该执行的命令示例：
-- 检查软件是否已安装：which ${softwareName} || echo "未安装"
-- 检查系统版本：cat /etc/os-release
-- 检查包管理器：which yum || which apt-get
+### Example commands for first iteration:
+- Check if software is installed: which ${softwareName} || echo "not installed"
+- Check system version: cat /etc/os-release
+- Check package manager: which yum || which apt-get
 
-**重要**：
-- 不要在服务器上执行搜索命令，直接使用你的知识决定安装方案
-- 第一轮只做检查，**不要设置 is_final_step 为 true**
-- 即使软件已安装，也应该在下一轮验证版本后再结束
+**Important**:
+- Do not run search commands on server, use your knowledge directly
+- First iteration only checks, **do not set is_final_step to true**
+- Even if software is installed, verify version in next iteration before finishing
 ` : `
-## 后续轮次：执行安装/配置
+## Subsequent Iterations: Execute Installation/Configuration
 
-**当前状态**: ${hasExecutedInstall ? '已执行过安装命令' : '尚未执行安装命令'}
+**Current status**: ${hasExecutedInstall ? 'Install command has been executed' : 'Install command not yet executed'}
 
-根据之前的检查结果，你必须：
+Based on previous check results, you must:
 ${hasExecutedInstall ? `
-- 验证安装是否成功（运行版本检查命令）
-- 如果验证成功，设置 is_final_step 为 true
-- 如果验证失败，分析原因并修复
+- Verify installation success (run version check command)
+- If verification succeeds, set is_final_step to true
+- If verification fails, analyze and fix
 ` : `
-- **必须执行实际的安装命令**，不能只是分析
-- 使用系统包管理器（yum/apt）或官方推荐的安装方式
-- 如果需要添加仓库，先添加仓库再安装
-- **禁止在未执行安装命令的情况下设置 is_final_step 为 true**
+- **Must execute actual install commands**, not just analyze
+- Use system package manager (yum/apt) or official recommended method
+- If repository needs to be added, add it first then install
+- **Do not set is_final_step to true without executing install commands**
 `}
 
-### 重要规则：
-1. **只有在以下情况才能设置 is_final_step 为 true**：
-   - 软件在第一轮检查时就已经安装好了
-   - 或者你已经执行了安装命令并且验证成功
-2. **绝对不能**只是"分析"或"规划"就结束任务
-3. 每一轮都必须返回要执行的命令，除非任务真正完成
+### Important Rules:
+1. **Only set is_final_step to true when**:
+   - Software was already installed in first iteration check
+   - Or you have executed install commands and verification succeeded
+2. **Never** just "analyze" or "plan" and end the task
+3. Each iteration must return commands to execute, unless task is truly complete
+4. **If previous approach failed, TRY A DIFFERENT APPROACH in the next iteration**
+5. **EXECUTE the fix, don't just describe it**
 `}
 
-请以JSON格式返回：
+Return in JSON format:
 {
-  "reasoning": "详细说明你的分析过程和选择理由",
-  "commands": ["命令1", "命令2"],
-  "expected_outcome": "预期结果",
+  "reasoning": "Explain your analysis and reasoning",
+  "commands": ["command1", "command2"],
+  "expected_outcome": "Expected result",
   "is_final_step": false
 }
 
-**关于 is_final_step 的严格规则**：
-- 设为 true 的唯一条件：软件已安装且验证成功
-- 设为 false 的情况：还需要执行安装、配置或验证命令
-- **如果 commands 数组为空，系统会自动验证任务是否完成**
+**CRITICAL RULES - READ CAREFULLY**:
+- **NEVER set is_final_step to true if the task is not actually complete**
+- **NEVER return empty commands array unless task is verified complete**
+- **If one approach fails, you MUST try a different approach in the next iteration**
+- **You are an EXECUTOR, not just an ANALYZER - execute commands to fix problems**
 
-注意：
-- 使用你的知识直接决定安装方案，不要生成搜索命令
-- 第一轮只执行系统检查命令（检查是否已安装、系统版本等）
-- 后续轮次执行实际的安装/配置命令
-- 使用 && 连接多个命令，确保按顺序执行
-- **重要：不要在命令中使用echo输出分析性内容，所有分析和说明都应该写在reasoning字段中**
-- 命令应该只执行实际操作，不要包含用于显示的echo语句
-- **必须执行实际操作才能完成任务，不能只是分析**`;
+**Strict rules for is_final_step**:
+- Set to true ONLY when: software is installed AND verified working
+- Set to false when: still need to execute install, configure, or verify commands
+- **If commands array is empty, system will auto-verify task completion**
+
+**When previous commands failed**:
+- DO NOT just analyze the failure and stop
+- DO execute alternative commands to fix the problem
+- Examples: if Node.js 22 fails due to glibc, try: nvm install 18 && nvm use 18
+
+Notes:
+- Use your knowledge to decide installation approach, do not generate search commands
+- First iteration only runs system check commands
+- Subsequent iterations execute actual install/configure commands
+- Use && to chain multiple commands for sequential execution
+- **Important: Do not use echo for analysis output, put all analysis in reasoning field**
+- Commands should only perform actual operations, no display-only echo statements
+- **Must execute actual operations to complete task, not just analyze**`;
   }
 }

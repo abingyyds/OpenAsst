@@ -7,8 +7,10 @@ import { chatApi, ChatMessage } from '@/lib/api/chat'
 import { commandApi } from '@/lib/api/commands'
 import { scriptApi, ScriptTemplate } from '@/lib/api/scripts'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function ServerDetailPage({ params }: { params: { id: string } }) {
+  const { language } = useLanguage()
   const [server, setServer] = useState<Server | null>(null)
   const [loading, setLoading] = useState(true)
   const [command, setCommand] = useState('')
@@ -32,10 +34,12 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
   const [showCliSuggestion, setShowCliSuggestion] = useState(false)
   const [executionStats, setExecutionStats] = useState<{iterations: number, commands: number, errors: number} | null>(null)
   const [installingCli, setInstallingCli] = useState(false)
+  const [scriptExecuting, setScriptExecuting] = useState(false)
   const commandInputRef = useRef<HTMLInputElement>(null)
   const terminalRef = useRef<HTMLDivElement>(null)
   const aiAnalysisRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const scriptAbortRef = useRef<AbortController | null>(null)
 
   // 检查CLI安装状态
   const checkCliStatus = async () => {
@@ -62,6 +66,21 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
         setCommandHistory(JSON.parse(savedHistory))
       } catch (error) {
         console.error('Failed to load command history:', error)
+      }
+    }
+
+    // Check for pending script from marketplace
+    const pendingScript = sessionStorage.getItem('pendingScript')
+    if (pendingScript) {
+      sessionStorage.removeItem('pendingScript')
+      try {
+        const script = JSON.parse(pendingScript)
+        // Auto-execute the script after a short delay to let the page load
+        setTimeout(() => {
+          executeScriptFromData(script)
+        }, 500)
+      } catch (error) {
+        console.error('Failed to parse pending script:', error)
       }
     }
   }, [params.id])
@@ -151,7 +170,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     if (aiAnalysisRef.current) {
       aiAnalysisRef.current.scrollTop = aiAnalysisRef.current.scrollHeight
     }
-  }, [aiAnalysis])
+  }, [aiAnalysis, analysisResult])
 
   // Keyboard shortcuts
   useKeyboardShortcuts([
@@ -203,7 +222,8 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
         try {
           const aiResponse = await chatApi.chatWithAI(
             params.id,
-            `请分析这个命令的执行结果：\n命令：${cmd}\n输出：${result.output}`
+            `请分析这个命令的执行结果：\n命令：${cmd}\n输出：${result.output}`,
+            language
           )
           setAiAnalysis(prev => [...prev, {command: cmd, analysis: aiResponse.response}])
         } catch (error) {
@@ -219,7 +239,8 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
         try {
           const aiResponse = await chatApi.chatWithAI(
             params.id,
-            `这个命令执行失败了，请帮我分析原因并提供解决方案：\n命令：${cmd}\n错误：${errorMsg}`
+            `这个命令执行失败了，请帮我分析原因并提供解决方案：\n命令：${cmd}\n错误：${errorMsg}`,
+            language
           )
           setAiAnalysis(prev => [...prev, {command: cmd, analysis: aiResponse.response}])
         } catch (aiError) {
@@ -229,28 +250,31 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     }
   }
 
-  const executeScript = async (script: ScriptTemplate) => {
+  // Execute script - uses AI streaming execution
+  const executeScript = (script: ScriptTemplate) => {
     setShowScripts(false)
-    setTerminalOutput([...terminalOutput, `\n📜 执行脚本: ${script.name}`])
+    executeScriptFromData(script)
+  }
 
-    for (const cmd of script.commands) {
-      setTerminalOutput(prev => [...prev, `$ ${cmd}`, '执行中...'])
+  // Execute script from data (used when navigating from marketplace or scripts panel)
+  // Uses the same AI streaming execution as handleTwoLayerExecute
+  const executeScriptFromData = (script: any) => {
+    // Build task description from script
+    let taskDescription = `Execute script: ${script.name}\n\n`
 
-      try {
-        const result = await commandApi.execute(params.id, cmd)
-        setTerminalOutput(prev => {
-          const newOutput = [...prev]
-          newOutput[newOutput.length - 1] = result.output
-          return newOutput
-        })
-      } catch (error) {
-        setTerminalOutput(prev => {
-          const newOutput = [...prev]
-          newOutput[newOutput.length - 1] = `错误: ${error}`
-          return newOutput
-        })
-      }
+    if (script.documentContent) {
+      taskDescription += `Follow this guide:\n${script.documentContent}`
+    } else if (script.commands && script.commands.length > 0) {
+      const cmds = script.commands.map((c: any) =>
+        typeof c === 'string' ? c : c.command
+      ).filter(Boolean).join('\n')
+      taskDescription += `Execute these commands:\n${cmds}`
+    } else {
+      taskDescription += script.description
     }
+
+    // Use the AI streaming execution
+    handleTwoLayerExecute(taskDescription)
   }
 
   const sendChatMessage = async () => {
@@ -313,11 +337,12 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
           setChatMessages(prev =>
             prev.map(msg =>
               msg.id === aiMsgId
-                ? { ...msg, content: '抱歉，AI助手暂时无法响应。请稍后再试。' }
+                ? { ...msg, content: 'Sorry, AI assistant is temporarily unavailable. Please try again later.' }
                 : msg
             )
           )
-        }
+        },
+        language
       )
     } catch (error) {
       console.error('AI聊天失败:', error)
@@ -481,7 +506,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
             setTerminalOutput(prev => [
               ...prev,
               '='.repeat(60),
-              `✅ 执行完成 (共 ${data.iterations || 0} 轮)`,
+              `✅ Execution completed (${data.iterations || 0} rounds)`,
               '='.repeat(60)
             ])
 
@@ -534,7 +559,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
             setAiMessages(prev => [...prev, '', `❌ 错误: ${data.message}`])
           })
         }
-      })
+      }, undefined, language)
 
       // 添加执行结果到聊天界面
       if (fullResult) {
@@ -547,7 +572,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
           server_id: params.id,
           user_id: 'assistant',
           role: 'assistant',
-          content: `✅ 自动执行完成\n\n执行轮数: ${fullResult.iterations || 0}\n\n${executionDetails}`,
+          content: `✅ Auto-execution completed\n\nRounds: ${fullResult.iterations || 0}\n\n${executionDetails}`,
           created_at: new Date().toISOString()
         }
         setChatMessages(prev => [...prev, resultMsg])
@@ -570,12 +595,12 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
     }
   }
 
-  // 两层架构执行：流式执行 + AI深度解读
-  const handleTwoLayerExecute = async () => {
-    if (!chatMessage.trim()) return
+  // Two-layer architecture: Stream execution + AI deep analysis
+  const handleTwoLayerExecute = async (taskInput?: string) => {
+    const task = taskInput || chatMessage.trim()
+    if (!task) return
 
-    const task = chatMessage
-    setChatMessage('')
+    if (!taskInput) setChatMessage('')
     setAutoExecuting(true)
     setAnalysisResult(null)
     setAiMessages([])
@@ -591,13 +616,13 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
       server_id: params.id,
       user_id: 'current-user',
       role: 'user',
-      content: `🔄 智能执行任务: ${task}`,
+      content: `🔄 Smart Execute: ${task}`,
       created_at: new Date().toISOString()
     }
     setChatMessages(prev => [...prev, userMsg])
 
-    setTerminalOutput(prev => [...prev, '', '='.repeat(60), `🔄 两层智能执行: ${task}`, '='.repeat(60)])
-    setAiMessages(prev => [...prev, '📋 第一层：流式执行引擎启动...'])
+    setTerminalOutput(prev => [...prev, '', '='.repeat(60), `🔄 Two-layer Smart Execute: ${task}`, '='.repeat(60)])
+    setAiMessages(prev => [...prev, '📋 Layer 1: Stream execution engine starting...'])
 
     let fullExecutionResult: any = null
     let wasAborted = false
@@ -612,7 +637,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
         },
         onIterationStart: (data) => {
           flushSync(() => {
-            setAiMessages(prev => [...prev, '', `--- 第 ${data.iteration} 轮 ---`])
+            setAiMessages(prev => [...prev, '', `--- Round ${data.iteration} ---`])
           })
         },
         onStatus: (data) => {
@@ -655,45 +680,46 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
         onDone: (data) => {
           fullExecutionResult = data
           flushSync(() => {
-            setTerminalOutput(prev => [...prev, '', '--- 第一层执行完成 ---'])
-            setAiMessages(prev => [...prev, `✓ 第一层完成: 共 ${data.iterations || 0} 轮`])
+            setTerminalOutput(prev => [...prev, '', '--- Layer 1 execution completed ---'])
+            setAiMessages(prev => [...prev, `✓ Layer 1 completed: ${data.iterations || 0} rounds`])
           })
         },
         onError: (data) => {
           flushSync(() => {
-            setTerminalOutput(prev => [...prev, `❌ 错误: ${data.message}`])
+            setTerminalOutput(prev => [...prev, `❌ Error: ${data.message}`])
             setAiMessages(prev => [...prev, `❌ ${data.message}`])
           })
         },
         onAbort: () => {
           wasAborted = true
           flushSync(() => {
-            setTerminalOutput(prev => [...prev, '', '⏹️ 执行已被用户终止'])
-            setAiMessages(prev => [...prev, '⏹️ 执行已终止'])
+            setTerminalOutput(prev => [...prev, '', '⏹️ Execution aborted by user'])
+            setAiMessages(prev => [...prev, '⏹️ Execution aborted'])
           })
         }
-      }, abortController.signal)
+      }, abortController.signal, language)
 
-      // 如果被终止，跳过第二层
+      // If aborted, skip layer 2
       if (wasAborted) {
         setTerminalOutput(prev => [...prev, '='.repeat(60), '⏹️ 执行已终止', '='.repeat(60)])
         return
       }
 
-      // 第二层：AI深度分析
+      // Layer 2: AI deep analysis
       if (fullExecutionResult && !abortController.signal.aborted) {
-        setAiMessages(prev => [...prev, '', '📋 第二层：AI深度分析启动...'])
-        setTerminalOutput(prev => [...prev, '', '--- 第二层AI分析中 ---'])
+        setAiMessages(prev => [...prev, '', '📋 Layer 2: AI deep analysis starting...'])
+        setTerminalOutput(prev => [...prev, '', '--- Layer 2 AI analyzing ---'])
 
         try {
           const analysisResponse = await chatApi.analyzeExecutionResult(
             task,
             fullExecutionResult,
-            fullExecutionResult.systemInfo
+            fullExecutionResult.systemInfo,
+            language
           )
 
           setAnalysisResult(analysisResponse.analysis)
-          setAiMessages(prev => [...prev, '✓ 第二层完成: AI分析已生成'])
+          setAiMessages(prev => [...prev, '✓ Layer 2 completed: AI analysis generated'])
 
           const resultMsg: ChatMessage = {
             id: (Date.now() + 1).toString(),
@@ -709,7 +735,7 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
         }
       }
 
-      setTerminalOutput(prev => [...prev, '='.repeat(60), '✅ 两层智能执行完成', '='.repeat(60)])
+      setTerminalOutput(prev => [...prev, '='.repeat(60), '✅ Two-layer smart execution completed', '='.repeat(60)])
 
       // 执行完成后，如果CLI未安装，显示安装建议
       if (!cliInstalled && fullExecutionResult) {
@@ -762,132 +788,150 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
   }
 
   if (loading) {
-    return <div className="text-center py-12">加载中...</div>
+    return <div className="text-center py-12 text-green-500 font-mono">loading server...</div>
   }
 
   if (!server) {
-    return <div className="text-center py-12">服务器不存在</div>
+    return <div className="text-center py-12 text-red-400 font-mono">server not found</div>
   }
 
   return (
     <div>
-      {/* 服务器信息 - 紧凑横向布局 */}
-      <div className="bg-white rounded-lg shadow p-3 mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">{server.name}</h1>
-        <div className="flex items-center gap-6 text-sm">
-          <span className="text-gray-600">主机: {server.host}:{server.port}</span>
-          <span className="text-gray-600">用户: {server.username}</span>
+      {/* Server Info Header */}
+      <div className="terminal-card p-3 mb-4 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-green-400 font-mono">{server.name}</h1>
+        <div className="flex items-center gap-6 text-sm font-mono">
+          <span className="text-gray-500">host: <span className="text-green-500">{server.host}:{server.port}</span></span>
+          <span className="text-gray-500">user: <span className="text-green-500">{server.username}</span></span>
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${
-              server.status === 'connected' ? 'bg-green-500' : 'bg-gray-400'
+              server.status === 'connected' ? 'bg-green-400 status-online' : 'bg-gray-600'
             }`}></span>
-            <span className="text-gray-600">{server.status}</span>
+            <span className={server.status === 'connected' ? 'text-green-500' : 'text-gray-500'}>{server.status}</span>
           </div>
         </div>
       </div>
 
-      {/* CLI安装引导提示 */}
+      {/* CLI Install Prompt */}
       {showCliPrompt && !cliInstalled && (
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4 mb-4">
+        <div className="terminal-card border-green-500/30 p-4 mb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3">
-              <span className="text-2xl">🚀</span>
+              <span className="text-green-500 text-2xl font-mono">$</span>
               <div>
-                <h3 className="font-bold text-purple-800 dark:text-purple-300">安装 OpenAsst CLI 获得更强大的功能</h3>
-                <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
-                  CLI版本提供完整的智能任务引擎：安全检查、错误自动修复、多种动作类型支持
+                <h3 className="font-bold text-green-400 font-mono">Install OpenAsst CLI for enhanced features</h3>
+                <p className="text-sm text-gray-500 mt-1 font-mono">
+                  CLI provides: security checks, auto error recovery, smart task engine
                 </p>
                 <div className="flex gap-2 mt-3">
-                  <a
-                    href="/dashboard/cli-setup"
-                    className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+                  <button
+                    onClick={handleInstallCli}
+                    disabled={installingCli || autoExecuting}
+                    className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-500 disabled:opacity-50 font-mono btn-glow"
                   >
-                    查看安装指南
+                    {installingCli ? 'installing...' : '> ai_install'}
+                  </button>
+                  <a
+                    href="https://github.com/abingyyds/OpenAsst"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 border border-green-900/50 text-green-500 text-sm rounded hover:bg-green-900/20 font-mono"
+                  >
+                    github
                   </a>
                   <button
                     onClick={() => setShowCliPrompt(false)}
-                    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-sm rounded hover:bg-gray-300"
+                    className="px-3 py-2 border border-green-900/50 text-gray-500 text-sm rounded hover:bg-green-900/20 font-mono"
                   >
-                    稍后提醒
+                    later
                   </button>
                 </div>
               </div>
             </div>
             <button
               onClick={() => setShowCliPrompt(false)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-600 hover:text-green-400 font-mono"
             >
-              ✕
+              x
             </button>
           </div>
         </div>
       )}
 
-      {/* 执行完成后的CLI安装建议 */}
+      {/* CLI Install Suggestion after execution */}
       {showCliSuggestion && !cliInstalled && executionStats && (
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-300 dark:border-green-700 rounded-lg p-4 mb-4 animate-pulse">
+        <div className="terminal-card border-green-500/30 p-4 mb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3">
-              <span className="text-2xl">✨</span>
+              <span className="text-green-500 text-2xl font-mono">*</span>
               <div>
-                <h3 className="font-bold text-green-800 dark:text-green-300">任务执行完成！升级到 CLI 版本获得更多功能</h3>
-                <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                  本次执行: {executionStats.iterations} 轮迭代, {executionStats.commands} 条命令
-                  {executionStats.errors > 0 && <span className="text-orange-500"> ({executionStats.errors} 个错误)</span>}
+                <h3 className="font-bold text-green-400 font-mono">
+                  Task complete! Upgrade to CLI for more power
+                </h3>
+                <p className="text-sm text-gray-500 mt-1 font-mono">
+                  stats: {executionStats.iterations} iterations, {executionStats.commands} commands
+                  {executionStats.errors > 0 && (
+                    <span className="text-red-400"> ({executionStats.errors} errors)</span>
+                  )}
                 </p>
-                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  <p className="font-medium mb-1">CLI 版本额外功能：</p>
-                  <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li>🛡️ 安全检查 - 自动检测危险命令</li>
-                    <li>🔧 错误自动修复 - 智能分析并修复常见错误</li>
-                    <li>📁 文件操作 - 读取、写入、修改文件</li>
-                    <li>📦 包管理 - 自动检测并使用正确的包管理器</li>
-                    <li>🔍 项目分析 - 深度分析项目结构</li>
-                  </ul>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600 font-mono">
+                  <span># security_check</span>
+                  <span># auto_recovery</span>
+                  <span># file_operations</span>
+                  <span># smart_packages</span>
                 </div>
                 <div className="flex gap-2 mt-3">
-                  <a
-                    href="/dashboard/cli-setup"
-                    className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 font-medium"
+                  <button
+                    onClick={handleInstallCli}
+                    disabled={installingCli || autoExecuting}
+                    className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-500 disabled:opacity-50 font-mono btn-glow"
                   >
-                    🚀 立即安装 CLI
+                    {installingCli ? 'installing...' : '> install_cli'}
+                  </button>
+                  <a
+                    href="https://github.com/abingyyds/OpenAsst"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 border border-green-900/50 text-green-500 text-sm rounded hover:bg-green-900/20 font-mono"
+                  >
+                    github
                   </a>
                   <button
                     onClick={() => setShowCliSuggestion(false)}
-                    className="px-3 py-2 bg-gray-200 dark:bg-gray-700 text-sm rounded hover:bg-gray-300"
+                    className="px-3 py-2 border border-green-900/50 text-gray-500 text-sm rounded hover:bg-green-900/20 font-mono"
                   >
-                    下次再说
+                    later
                   </button>
                 </div>
               </div>
             </div>
             <button
               onClick={() => setShowCliSuggestion(false)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-600 hover:text-green-400 font-mono"
             >
-              ✕
+              x
             </button>
           </div>
         </div>
       )}
 
-      {/* AI实时分析 - 横跨整个页面，终端风格 */}
-      <div ref={aiAnalysisRef} className="bg-gray-900 rounded-lg p-4 mb-4 h-48 overflow-auto">
-        <h3 className="text-green-400 font-bold mb-3 font-mono">🤖 AI 实时分析</h3>
-        <div className="space-y-3">
+      {/* AI Real-time Analysis */}
+      <div className="terminal-card p-4 mb-4 h-64 flex flex-col">
+        <h3 className="text-green-400 font-bold mb-3 font-mono flex-shrink-0"># AI Analysis</h3>
+        <div ref={aiAnalysisRef} className="flex-1 overflow-auto space-y-3">
           {aiAnalysis.map((item, i) => (
             <div key={i} className="border-l-2 border-green-500 pl-3">
-              <div className="text-green-400 font-mono text-xs mb-1">$ {item.command}</div>
+              <div className="text-[#00ff41] font-mono text-xs mb-1">$ {item.command}</div>
               <div className="text-green-300 font-mono text-xs whitespace-pre-wrap">{item.analysis}</div>
             </div>
           ))}
           {aiAnalysis.length === 0 && !analysisResult && (
-            <div className="text-green-600 font-mono text-xs">等待命令执行...</div>
+            <div className="text-green-600 font-mono text-xs">waiting for commands...</div>
           )}
-          {/* 两层架构AI分析结果 */}
+          {/* Two-layer AI analysis result */}
           {analysisResult && (
             <div className="mt-4 pt-4 border-t border-green-800">
-              <div className="text-purple-400 font-bold text-xs mb-2">📊 AI 深度分析</div>
+              <div className="text-emerald-400 font-bold text-xs mb-2 font-mono"># Deep Analysis</div>
               <div className="text-green-300 font-mono text-xs whitespace-pre-wrap">{analysisResult}</div>
             </div>
           )}
@@ -895,11 +939,11 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
       </div>
 
       <div className="flex gap-6 items-start">
-        {/* 左侧：终端区域 - 只显示命令和输出 */}
+        {/* Terminal Area */}
         <div className="flex-1 flex flex-col">
-          <div className="bg-gray-900 rounded-lg p-4 h-[600px] flex flex-col">
+          <div className="terminal-card p-4 h-[600px] flex flex-col">
             <div className="flex items-center justify-between mb-3 border-b border-green-800 pb-2">
-              <h3 className="text-green-400 font-bold font-mono">💻 终端</h3>
+              <h3 className="text-green-400 font-bold font-mono"># Terminal</h3>
               <div className="flex gap-2">
                 <button
                   onClick={() => setAutoScroll(!autoScroll)}
@@ -908,30 +952,30 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
                       ? 'bg-green-700 text-green-100'
                       : 'bg-gray-700 text-gray-300'
                   }`}
-                  title="切换自动滚动"
+                  title="Toggle auto-scroll"
                 >
-                  {autoScroll ? '📜 自动滚动' : '⏸️ 暂停滚动'}
+                  {autoScroll ? 'scroll:on' : 'scroll:off'}
                 </button>
                 <button
                   onClick={copyTerminalOutput}
-                  className="px-2 py-1 bg-blue-700 text-blue-100 rounded hover:bg-blue-600 font-mono text-xs"
-                  title="复制输出"
+                  className="px-2 py-1 border border-green-900/50 text-green-500 rounded hover:bg-green-900/20 font-mono text-xs"
+                  title="Copy output"
                 >
-                  📋 复制
+                  copy
                 </button>
                 <button
                   onClick={downloadTerminalOutput}
-                  className="px-2 py-1 bg-purple-700 text-purple-100 rounded hover:bg-purple-600 font-mono text-xs"
-                  title="下载输出"
+                  className="px-2 py-1 border border-green-900/50 text-green-500 rounded hover:bg-green-900/20 font-mono text-xs"
+                  title="Download output"
                 >
-                  💾 下载
+                  save
                 </button>
                 <button
                   onClick={clearTerminal}
-                  className="px-2 py-1 bg-red-700 text-red-100 rounded hover:bg-red-600 font-mono text-xs"
-                  title="清空终端"
+                  className="px-2 py-1 border border-red-900/50 text-red-400 rounded hover:bg-red-900/20 font-mono text-xs"
+                  title="Clear terminal"
                 >
-                  🗑️ 清空
+                  clear
                 </button>
               </div>
             </div>
@@ -963,32 +1007,45 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
               onChange={(e) => setCommand(e.target.value)}
               onKeyDown={handleKeyDown}
               onKeyPress={(e) => e.key === 'Enter' && executeCommand()}
-              placeholder="输入命令... (↑↓ 切换历史)"
-              className="flex-1 px-4 py-2 border rounded"
+              placeholder="enter command... (up/down for history)"
+              className="flex-1 px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
             />
             <button
               onClick={executeCommand}
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-500 font-mono btn-glow"
             >
-              执行
+              run
             </button>
             <button
               onClick={() => setShowScripts(!showScripts)}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              className="px-4 py-2 border border-green-500/50 text-green-400 rounded hover:bg-green-900/20 font-mono"
+              disabled={scriptExecuting}
             >
-              📜 命令市场
+              $ scripts
             </button>
+            {scriptExecuting && (
+              <button
+                onClick={() => {
+                  if (scriptAbortRef.current) {
+                    scriptAbortRef.current.abort()
+                  }
+                }}
+                className="px-4 py-2 border border-red-500/50 text-red-400 rounded hover:bg-red-900/20 font-mono animate-pulse"
+              >
+                stop script
+              </button>
+            )}
           </div>
 
           {showScripts && (
-            <div className="mt-4 bg-white rounded-lg shadow p-4">
-              <h3 className="font-bold mb-3">命令市场</h3>
+            <div className="mt-4 terminal-card p-4">
+              <h3 className="font-bold mb-3 text-green-400 font-mono"># Script Marketplace</h3>
               <input
                 type="text"
                 value={scriptSearch}
                 onChange={(e) => setScriptSearch(e.target.value)}
-                placeholder="搜索脚本..."
-                className="w-full px-3 py-2 border rounded mb-3"
+                placeholder="search scripts..."
+                className="w-full px-3 py-2 bg-[#0a0f0d] border border-green-900/50 rounded mb-3 text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
               />
               <div className="max-h-64 overflow-auto space-y-2">
                 {scripts
@@ -1000,14 +1057,14 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
                     <div
                       key={script.id}
                       onClick={() => executeScript(script)}
-                      className="p-3 border rounded hover:bg-blue-50 cursor-pointer"
+                      className="p-3 border border-green-900/50 rounded hover:border-green-500/50 cursor-pointer bg-[#0a0f0d]"
                     >
-                      <div className="font-medium">{script.name}</div>
-                      <div className="text-sm text-gray-600">{script.description}</div>
+                      <div className="font-medium text-green-400 font-mono">{script.name}</div>
+                      <div className="text-sm text-gray-500">{script.description}</div>
                       <div className="flex gap-1 mt-1">
                         {script.tags.map(tag => (
-                          <span key={tag} className="px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded">
-                            {tag}
+                          <span key={tag} className="px-2 py-0.5 bg-green-900/30 text-green-500 text-xs rounded font-mono">
+                            #{tag}
                           </span>
                         ))}
                       </div>
@@ -1018,35 +1075,35 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
           )}
         </div>
 
-        {/* 右侧：AI助手 - 终端风格 */}
-        <div className="flex-1 bg-gray-900 rounded-lg shadow p-4 flex flex-col h-[600px]">
+        {/* AI Assistant */}
+        <div className="flex-1 terminal-card p-4 flex flex-col h-[600px]">
           <div className="flex items-center justify-between mb-3 border-b border-green-800 pb-2">
-            <h2 className="text-green-400 font-bold font-mono">🤖 AI助手</h2>
+            <h2 className="text-green-400 font-bold font-mono"># AI Assistant</h2>
             <button
               onClick={async () => {
-                if (confirm('确定要清除对话历史吗？')) {
+                if (confirm('Clear chat history?')) {
                   try {
                     await chatApi.clearMessages(params.id)
                     setChatMessages([])
                     setAiMessages([])
                   } catch (error) {
-                    console.error('清除历史失败:', error)
+                    console.error('Failed to clear history:', error)
                   }
                 }
               }}
-              className="px-3 py-1 bg-red-700 text-red-100 rounded hover:bg-red-600 font-mono text-xs"
-              title="清除对话历史"
+              className="px-3 py-1 border border-red-900/50 text-red-400 rounded hover:bg-red-900/20 font-mono text-xs"
+              title="Clear history"
             >
-              清除历史
+              clear
             </button>
           </div>
 
           <div className="flex-1 overflow-auto mb-4 space-y-2">
-            {/* 显示对话历史 */}
+            {/* Chat history */}
             {chatMessages.map((msg) => (
               <div key={msg.id} className="font-mono text-sm">
-                <span className={msg.role === 'user' ? 'text-cyan-400' : 'text-green-400'}>
-                  {msg.role === 'user' ? '👤 用户' : '🤖 AI'}:
+                <span className={msg.role === 'user' ? 'text-cyan-400' : 'text-[#00ff41]'}>
+                  {msg.role === 'user' ? '> user' : '$ ai'}:
                 </span>
                 <span className="text-gray-300 ml-2">{msg.content}</span>
               </div>
@@ -1077,18 +1134,18 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
               )
             })}
 
-            {/* 显示加载指示器 */}
+            {/* Loading indicator */}
             {autoExecuting && (
-              <div className="flex items-center gap-2 text-yellow-400 font-mono text-sm animate-pulse">
-                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                <span>AI正在分析和执行...</span>
+              <div className="flex items-center gap-2 text-green-400 font-mono text-sm animate-pulse">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                <span>AI processing...</span>
               </div>
             )}
 
             {chatMessages.length === 0 && aiMessages.length === 0 && !autoExecuting && (
-              <div className="text-green-600 font-mono text-sm">等待AI分析...</div>
+              <div className="text-green-600 font-mono text-sm">waiting for input...</div>
             )}
           </div>
 
@@ -1098,23 +1155,23 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
               value={chatMessage}
               onChange={(e) => setChatMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-              placeholder="向AI提问或描述任务..."
-              className="flex-1 px-4 py-2 bg-gray-800 border border-green-800 rounded text-green-400 placeholder-green-700 font-mono"
+              placeholder="ask AI or describe task..."
+              className="flex-1 px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-400 placeholder-gray-600 font-mono focus:outline-none focus:border-green-500"
             />
             <button
               onClick={sendChatMessage}
-              className="px-4 py-2 bg-green-700 text-green-100 rounded hover:bg-green-600 font-mono"
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 font-mono"
               disabled={autoExecuting}
             >
-              发送
+              send
             </button>
             <button
               onClick={handleTwoLayerExecute}
-              className="px-4 py-2 bg-purple-700 text-purple-100 rounded hover:bg-purple-600 disabled:opacity-50 font-mono"
+              className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-500 disabled:opacity-50 font-mono btn-glow"
               disabled={autoExecuting || !chatMessage.trim()}
-              title="智能执行：实时执行 + AI深度分析"
+              title="Smart execute: real-time + AI analysis"
             >
-              🤖 智能执行
+              {'>'} execute
             </button>
             {autoExecuting && (
               <button
@@ -1124,10 +1181,10 @@ export default function ServerDetailPage({ params }: { params: { id: string } })
                   }
                   setAutoExecuting(false)
                 }}
-                className="px-4 py-2 bg-red-700 text-red-100 rounded hover:bg-red-600 font-mono"
-                title="终止执行"
+                className="px-4 py-2 border border-red-500/50 text-red-400 rounded hover:bg-red-900/20 font-mono"
+                title="Stop execution"
               >
-                ⏹️ 终止
+                stop
               </button>
             )}
           </div>

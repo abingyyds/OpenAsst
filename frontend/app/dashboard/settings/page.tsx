@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useLanguage, languages } from '@/contexts/LanguageContext'
 
 interface ApiConfig {
   anthropicApiKey?: string
@@ -21,6 +22,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { language, setLanguage } = useLanguage()
   const [config, setConfig] = useState<ApiConfig>({})
   const [saved, setSaved] = useState(false)
   const [models, setModels] = useState<Model[]>([])
@@ -128,54 +130,54 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">API 配置</h1>
+        <h1 className="text-3xl font-bold text-white">{'>'} Settings</h1>
         <button
           onClick={() => router.push('/dashboard')}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800"
+          className="px-4 py-2 text-green-600 hover:text-green-400 font-mono"
         >
-          返回
+          &lt;- back
         </button>
       </div>
 
       {saved && (
-        <div className="mb-6 p-4 bg-green-50 text-green-800 rounded">
-          ✓ 配置已保存
+        <div className="mb-6 p-4 bg-green-900/30 border border-green-500/50 text-green-400 rounded font-mono">
+          [OK] config saved
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow p-6 space-y-6">
+      <div className="terminal-card p-6 space-y-6">
         <div>
-          <h2 className="text-xl font-semibold mb-4">Anthropic API 配置</h2>
+          <h2 className="text-xl font-semibold mb-4 text-green-400 font-mono"># Anthropic API</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">API Key</label>
+              <label className="block text-sm font-mono text-green-500 mb-2">api_key:</label>
               <input
                 type="password"
                 value={config.anthropicApiKey || ''}
                 onChange={(e) => setConfig({ ...config, anthropicApiKey: e.target.value })}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-4 py-3 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
                 placeholder="sk-ant-..."
               />
-              <p className="text-xs text-gray-500 mt-1">留空则使用服务器提供的免费API</p>
+              <p className="text-xs text-gray-500 mt-1 font-mono">leave empty to use server-provided API</p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Base URL（可选）</label>
+              <label className="block text-sm font-mono text-green-500 mb-2">base_url: (optional)</label>
               <input
                 type="text"
                 value={config.anthropicBaseUrl || ''}
                 onChange={(e) => setConfig({ ...config, anthropicBaseUrl: e.target.value })}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-4 py-3 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
                 placeholder="https://api.anthropic.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">模型选择</label>
+              <label className="block text-sm font-mono text-green-500 mb-2">model:</label>
               <select
                 value={config.anthropicModel || ''}
                 onChange={(e) => setConfig({ ...config, anthropicModel: e.target.value })}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-4 py-3 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
               >
-                <option value="">请选择模型</option>
+                <option value="">-- select model --</option>
                 {models.map(model => (
                   <option key={model.id} value={model.id}>
                     {model.name} - {model.description}
@@ -187,55 +189,74 @@ export default function SettingsPage() {
                   type="button"
                   onClick={handleFetchModels}
                   disabled={fetchingModels || !config.anthropicApiKey}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed font-mono"
                 >
-                  {fetchingModels ? '验证中...' : '🔄 验证API并获取模型'}
+                  {fetchingModels ? 'validating...' : '> validate_api'}
                 </button>
                 {fetchError && (
-                  <span className="text-xs text-red-600">{fetchError}</span>
+                  <span className={`text-xs font-mono ${fetchError.startsWith('[OK]') || fetchError.includes('✓') ? 'text-green-400' : 'text-red-400'}`}>{fetchError}</span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-1">点击按钮验证API密钥并刷新模型列表</p>
+              <p className="text-xs text-gray-500 mt-1 font-mono">click to validate API key and fetch models</p>
             </div>
           </div>
         </div>
-        <hr />
+        <hr className="border-green-900/30" />
         <div>
-          <h2 className="text-xl font-semibold mb-2">搜索 API 配置（可选）</h2>
-          <p className="text-sm text-gray-600 mb-4">配置搜索API后，AI可以自动搜索相关信息</p>
+          <h2 className="text-xl font-semibold mb-2 text-green-400 font-mono"># Search API (optional)</h2>
+          <p className="text-sm text-gray-500 mb-4 font-mono">enable AI to search for information</p>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Tavily API Key</label>
+              <label className="block text-sm font-mono text-green-500 mb-2">tavily_api_key:</label>
               <input
                 type="password"
                 value={config.tavilyApiKey || ''}
                 onChange={(e) => setConfig({ ...config, tavilyApiKey: e.target.value })}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-4 py-3 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Serper API Key</label>
+              <label className="block text-sm font-mono text-green-500 mb-2">serper_api_key:</label>
               <input
                 type="password"
                 value={config.serperApiKey || ''}
                 onChange={(e) => setConfig({ ...config, serperApiKey: e.target.value })}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-4 py-3 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
               />
             </div>
+          </div>
+        </div>
+        <hr className="border-green-900/30" />
+        <div>
+          <h2 className="text-xl font-semibold mb-2 text-green-400 font-mono"># AI Language</h2>
+          <p className="text-sm text-gray-500 mb-4 font-mono">select the language for AI responses</p>
+          <div>
+            <label className="block text-sm font-mono text-green-500 mb-2">language:</label>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="w-full px-4 py-3 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
+            >
+              {languages.map(lang => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.nativeName} ({lang.name})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="flex gap-3 pt-4">
           <button
             onClick={handleSave}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="flex-1 px-4 py-3 bg-green-600 text-white rounded hover:bg-green-500 font-mono btn-glow"
           >
-            保存配置
+            {'>'} save_config
           </button>
           <button
             onClick={handleClear}
-            className="px-4 py-2 border rounded hover:bg-gray-50"
+            className="px-4 py-3 border border-red-500/50 text-red-400 rounded hover:bg-red-900/20 font-mono"
           >
-            清除配置
+            x clear
           </button>
         </div>
       </div>

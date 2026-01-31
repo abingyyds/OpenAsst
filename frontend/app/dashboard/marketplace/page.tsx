@@ -256,36 +256,36 @@ export default function MarketplacePage() {
   }
 
   if (loading) {
-    return <div className="text-center py-12">加载中...</div>
+    return <div className="text-center py-12 text-green-500 font-mono">loading scripts...</div>
   }
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">命令市场</h1>
+        <h1 className="text-3xl font-bold text-white">{'>'} Marketplace</h1>
         <div className="flex gap-3">
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="🔍 搜索脚本、标签或作者... (Ctrl+K)"
-            className="px-4 py-2 border border-gray-300 rounded w-64"
+            placeholder="search scripts... (Ctrl+K)"
+            className="px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded w-64 text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
           />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded bg-white"
+            className="px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-400 font-mono focus:outline-none focus:border-green-500"
           >
-            <option value="recent">最新</option>
-            <option value="likes">最多点赞</option>
-            <option value="usage">最多使用</option>
+            <option value="recent">recent</option>
+            <option value="likes">most liked</option>
+            <option value="usage">most used</option>
           </select>
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 font-mono btn-glow"
           >
-            创建脚本
+            + create
           </button>
         </div>
       </div>
@@ -293,108 +293,108 @@ export default function MarketplacePage() {
       <div className="flex gap-2 mb-6 flex-wrap">
         <button
           onClick={() => setCategory('all')}
-          className={`px-4 py-2 rounded ${category === 'all' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300'}`}
+          className={`px-4 py-2 rounded font-mono ${category === 'all' ? 'bg-green-600 text-white' : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'}`}
         >
-          全部
+          all
         </button>
         <button
           onClick={() => setCategory('mine')}
-          className={`px-4 py-2 rounded ${category === 'mine' ? 'bg-green-600 text-white' : 'bg-white border border-gray-300'}`}
+          className={`px-4 py-2 rounded font-mono ${category === 'mine' ? 'bg-green-600 text-white' : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'}`}
         >
-          我的脚本
+          my_scripts
         </button>
         <button
           onClick={() => setCategory('deployment')}
-          className={`px-4 py-2 rounded ${category === 'deployment' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300'}`}
+          className={`px-4 py-2 rounded font-mono ${category === 'deployment' ? 'bg-green-600 text-white' : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'}`}
         >
-          部署
+          deploy
         </button>
         <button
           onClick={() => setCategory('maintenance')}
-          className={`px-4 py-2 rounded ${category === 'maintenance' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300'}`}
+          className={`px-4 py-2 rounded font-mono ${category === 'maintenance' ? 'bg-green-600 text-white' : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'}`}
         >
-          维护
+          maintain
         </button>
         <button
           onClick={() => setCategory('monitoring')}
-          className={`px-4 py-2 rounded ${category === 'monitoring' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300'}`}
+          className={`px-4 py-2 rounded font-mono ${category === 'monitoring' ? 'bg-green-600 text-white' : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'}`}
         >
-          监控
+          monitor
         </button>
         <button
           onClick={() => setCategory('docker')}
-          className={`px-4 py-2 rounded ${category === 'docker' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300'}`}
+          className={`px-4 py-2 rounded font-mono ${category === 'docker' ? 'bg-green-600 text-white' : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'}`}
         >
-          Docker
+          docker
         </button>
         <button
           onClick={() => setCategory('security')}
-          className={`px-4 py-2 rounded ${category === 'security' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300'}`}
+          className={`px-4 py-2 rounded font-mono ${category === 'security' ? 'bg-green-600 text-white' : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'}`}
         >
-          安全
+          security
         </button>
         <button
           onClick={() => setCategory('backup')}
-          className={`px-4 py-2 rounded ${category === 'backup' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300'}`}
+          className={`px-4 py-2 rounded font-mono ${category === 'backup' ? 'bg-green-600 text-white' : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'}`}
         >
-          备份
+          backup
         </button>
         <button
           onClick={() => setCategory('network')}
-          className={`px-4 py-2 rounded ${category === 'network' ? 'bg-blue-600 text-white' : 'bg-white border border-gray-300'}`}
+          className={`px-4 py-2 rounded font-mono ${category === 'network' ? 'bg-green-600 text-white' : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'}`}
         >
-          网络
+          network
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredScripts.length === 0 ? (
-          <div className="col-span-full text-center py-12 text-gray-500">
-            {searchQuery ? '没有找到匹配的脚本' : '暂无脚本'}
+          <div className="col-span-full text-center py-12 text-gray-500 font-mono">
+            {searchQuery ? 'no matching scripts' : 'no scripts found'}
           </div>
         ) : (
           filteredScripts.map(script => (
-          <div key={script.id} className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+          <div key={script.id} className="terminal-card p-6 hover:border-green-500/50 transition">
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
-                <h3 className="font-bold">{script.name}</h3>
+                <h3 className="font-bold text-green-400 font-mono">{script.name}</h3>
                 {userId && script.authorId === userId && (
-                  <span className="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">
-                    我的脚本
+                  <span className="inline-block mt-1 px-2 py-0.5 bg-green-900/30 text-green-500 text-xs rounded font-mono">
+                    mine
                   </span>
                 )}
               </div>
             </div>
-            <p className="text-gray-600 text-sm mb-3">{script.description}</p>
+            <p className="text-gray-500 text-sm mb-3">{script.description}</p>
 
             {script.author && (
-              <p className="text-xs text-gray-500 mb-3">
-                作者: {script.author}
+              <p className="text-xs text-gray-600 mb-3 font-mono">
+                by: {script.author}
               </p>
             )}
 
             <div className="flex gap-2 flex-wrap mb-4">
-              <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+              <span className="px-2 py-1 bg-green-900/30 text-green-500 text-xs rounded font-mono">
                 {script.category || 'custom'}
               </span>
               {script.documentContent && (
-                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">
-                  📄 {script.documentType === 'markdown' ? 'Markdown' : '文档'}
+                <span className="px-2 py-1 bg-emerald-900/30 text-emerald-400 text-xs rounded font-mono">
+                  {script.documentType === 'markdown' ? 'md' : 'doc'}
                 </span>
               )}
               {script.tags && script.tags.map(tag => (
-                <span key={tag} className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded">
-                  {tag}
+                <span key={tag} className="px-2 py-1 bg-green-900/20 text-green-600 text-xs rounded font-mono">
+                  #{tag}
                 </span>
               ))}
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-              <span>❤️ {script.likeCount || 0}</span>
-              <span>🔄 {script.usageCount || script.usage_count || 0}</span>
+            <div className="flex items-center gap-4 text-sm text-gray-500 mb-4 font-mono">
+              <span>+{script.likeCount || 0}</span>
+              <span>x{script.usageCount || script.usage_count || 0}</span>
             </div>
 
-            {/* Rating Display and Input */}
+            {/* Rating Display */}
             <div className="flex items-center gap-2 mb-4">
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map(star => {
@@ -407,15 +407,15 @@ export default function MarketplacePage() {
                     <button
                       key={star}
                       onClick={() => handleRate(script.id, star)}
-                      className="text-xl hover:scale-110 transition-transform"
-                      title={`评分 ${star} 星`}
+                      className={`text-lg hover:scale-110 transition-transform ${isFilled ? 'text-green-400' : 'text-gray-600'}`}
+                      title={`Rate ${star}`}
                     >
-                      {isFilled ? '⭐' : '☆'}
+                      {isFilled ? '*' : '.'}
                     </button>
                   )
                 })}
               </div>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-500 font-mono">
                 {scriptRatings.get(script.id)?.average.toFixed(1) || '0.0'}
                 ({scriptRatings.get(script.id)?.count || 0})
               </span>
@@ -424,32 +424,32 @@ export default function MarketplacePage() {
             <div className="flex gap-2 mb-2">
               <button
                 onClick={() => handleLike(script.id)}
-                className={`flex-1 px-3 py-2 text-sm rounded border transition ${
+                className={`flex-1 px-3 py-2 text-sm rounded border font-mono transition ${
                   likedScripts.has(script.id)
-                    ? 'bg-red-50 border-red-300 text-red-600 hover:bg-red-100'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    ? 'bg-green-900/30 border-green-500/50 text-green-400'
+                    : 'border-green-900/50 text-gray-500 hover:text-green-400'
                 }`}
               >
-                {likedScripts.has(script.id) ? '❤️ 已点赞' : '🤍 点赞'}
+                {likedScripts.has(script.id) ? '+1' : 'like'}
               </button>
               <button
                 onClick={() => handleFavorite(script.id)}
-                className={`flex-1 px-3 py-2 text-sm rounded border transition ${
+                className={`flex-1 px-3 py-2 text-sm rounded border font-mono transition ${
                   favoritedScripts.has(script.id)
-                    ? 'bg-yellow-50 border-yellow-300 text-yellow-600 hover:bg-yellow-100'
-                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    ? 'bg-yellow-900/30 border-yellow-500/50 text-yellow-400'
+                    : 'border-green-900/50 text-gray-500 hover:text-yellow-400'
                 }`}
               >
-                {favoritedScripts.has(script.id) ? '⭐ 已收藏' : '☆ 收藏'}
+                {favoritedScripts.has(script.id) ? 'saved' : 'save'}
               </button>
               <button
                 onClick={() => {
                   setSelectedScript(script)
                   setIsPreviewModalOpen(true)
                 }}
-                className="flex-1 px-3 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
+                className="flex-1 px-3 py-2 border border-green-900/50 text-gray-400 text-sm rounded hover:text-green-400 font-mono"
               >
-                👁️ 预览
+                view
               </button>
             </div>
             <div className="flex gap-2">
@@ -458,17 +458,17 @@ export default function MarketplacePage() {
                   setSelectedScript(script)
                   setIsModalOpen(true)
                 }}
-                className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-500 font-mono btn-glow"
               >
-                使用
+                {'>'} use
               </button>
               {userId && script.authorId === userId && (
                 <button
                   onClick={() => handleDelete(script.id)}
-                  className="px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                  title="删除脚本"
+                  className="px-3 py-2 bg-red-900/50 text-red-400 text-sm rounded hover:bg-red-800 font-mono"
+                  title="Delete"
                 >
-                  🗑️
+                  x
                 </button>
               )}
             </div>

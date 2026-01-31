@@ -53,7 +53,7 @@ export const chatApi = {
     return data
   },
 
-  async chatWithAI(serverId: string, message: string): Promise<AIChatResponse> {
+  async chatWithAI(serverId: string, message: string, language?: string): Promise<AIChatResponse> {
     const headers = {
       'Content-Type': 'application/json',
       ...getApiHeaders()
@@ -62,7 +62,7 @@ export const chatApi = {
     const response = await fetch(`${API_BASE_URL}/api/sessions/${serverId}/chat`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, language }),
     })
 
     if (!response.ok) {
@@ -77,7 +77,8 @@ export const chatApi = {
     message: string,
     onChunk: (chunk: string) => void,
     onComplete: (timestamp: string) => void,
-    onError: (error: string) => void
+    onError: (error: string) => void,
+    language?: string
   ): Promise<void> {
     const headers = {
       'Content-Type': 'application/json',
@@ -88,7 +89,7 @@ export const chatApi = {
       const response = await fetch(`${API_BASE_URL}/api/sessions/${serverId}/chat/stream`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, language }),
       })
 
       if (!response.ok) {
@@ -170,7 +171,8 @@ export const chatApi = {
       onError?: (data: any) => void
       onAbort?: () => void
     },
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    language?: string
   ): Promise<void> {
     const headers = {
       'Content-Type': 'application/json',
@@ -181,7 +183,7 @@ export const chatApi = {
       const response = await fetch(`${API_BASE_URL}/api/sessions/${serverId}/auto-execute/stream`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ task }),
+        body: JSON.stringify({ task, language }),
         signal
       })
 
@@ -312,7 +314,8 @@ export const chatApi = {
   async analyzeExecutionResult(
     task: string,
     executionResult: any,
-    systemInfo?: string
+    systemInfo?: string,
+    language?: string
   ): Promise<{ success: boolean; analysis: string; timestamp: string }> {
     const headers = {
       'Content-Type': 'application/json',
@@ -322,7 +325,7 @@ export const chatApi = {
     const response = await fetch(`${API_BASE_URL}/api/cli/analyze-result`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ task, executionResult, systemInfo })
+      body: JSON.stringify({ task, executionResult, systemInfo, language })
     })
     if (!response.ok) throw new Error('AI分析失败')
     return response.json()

@@ -32,22 +32,18 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch statistics
         const statsResponse = await fetch(`${API_BASE_URL}/api/statistics`)
         if (statsResponse.ok) {
           const statsData = await statsResponse.json()
           setStats(statsData)
         }
 
-        // Fetch popular scripts
         const scripts = await scriptApi.getPopular(5)
         setPopularScripts(scripts)
 
-        // Get current model from localStorage
         const savedModel = localStorage.getItem('anthropic_model') || 'claude-3-5-sonnet-20241022'
         setCurrentModel(savedModel)
 
-        // Fetch model list to get the display name
         const savedConfig = localStorage.getItem('apiConfig')
         if (savedConfig) {
           const config = JSON.parse(savedConfig)
@@ -79,104 +75,98 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold mb-6">仪表板</h1>
+      <div className="flex items-center gap-3 mb-8">
+        <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+        <span className="inline-flex items-center gap-2 px-3 py-1 bg-green-900/30 border border-green-500/30 rounded-full">
+          <span className="w-2 h-2 bg-green-400 rounded-full status-online" />
+          <span className="text-green-400 text-sm font-mono">online</span>
+        </span>
+      </div>
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm">服务器总数</h3>
-          <p className="text-3xl font-bold mt-2">{loading ? '...' : stats.totalServers}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm">脚本总数</h3>
-          <p className="text-3xl font-bold mt-2">{loading ? '...' : stats.totalScripts}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm">执行次数</h3>
-          <p className="text-3xl font-bold mt-2">{loading ? '...' : stats.totalExecutions}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-500 text-sm">AI对话次数</h3>
-          <p className="text-3xl font-bold mt-2">{loading ? '...' : stats.totalAiInteractions}</p>
-        </div>
+        <StatCard label="servers" value={loading ? '...' : stats.totalServers} icon="#" />
+        <StatCard label="scripts" value={loading ? '...' : stats.totalScripts} icon="$" />
+        <StatCard label="executions" value={loading ? '...' : stats.totalExecutions} icon=">" />
+        <StatCard label="ai_calls" value={loading ? '...' : stats.totalAiInteractions} icon="@" />
       </div>
 
       {/* AI Model Info */}
-      <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-8">
+      <div className="terminal-card p-4 mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-medium text-blue-900">当前 AI 模型</h3>
-            <p className="text-lg font-semibold text-blue-700 mt-1">{modelName}</p>
-            <p className="text-xs text-blue-600 mt-1">{currentModel}</p>
+            <h3 className="text-sm font-mono text-green-500">current_model:</h3>
+            <p className="text-lg font-semibold text-[#00ff41] mt-1 font-mono">{modelName}</p>
+            <p className="text-xs text-green-600/70 mt-1 font-mono">{currentModel}</p>
           </div>
           <Link
             href="/dashboard/settings"
-            className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-500 font-mono btn-glow"
           >
-            更改设置
+            {'>'} configure
           </Link>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Start Section */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-bold mb-4">快速开始</h2>
-          <p className="text-gray-600 mb-4">欢迎使用 OpenAsst！开始管理你的服务器。</p>
+        <div className="terminal-card p-6">
+          <h2 className="text-xl font-bold mb-4 text-white font-mono">{'>'} Quick Start</h2>
+          <p className="text-gray-400 mb-4 font-mono text-sm">Welcome to OpenAsst! Start managing your servers.</p>
           <div className="space-y-3">
             <Link
               href="/dashboard/servers"
-              className="block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-center"
+              className="block px-4 py-3 bg-green-600 text-white rounded hover:bg-green-500 text-center font-mono btn-glow"
             >
-              添加服务器
+              # add_server
             </Link>
             <Link
               href="/dashboard/marketplace"
-              className="block px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-center"
+              className="block px-4 py-3 border border-green-500/50 text-green-400 rounded hover:bg-green-900/20 text-center font-mono"
             >
-              浏览脚本市场
+              $ browse_marketplace
             </Link>
             <Link
               href="/dashboard/marketplace?create=true"
-              className="block px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-center"
+              className="block px-4 py-3 border border-green-500/50 text-green-400 rounded hover:bg-green-900/20 text-center font-mono"
             >
-              创建新脚本
+              @ create_script
             </Link>
           </div>
         </div>
 
         {/* Popular Scripts Widget */}
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="terminal-card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">热门脚本</h2>
-            <Link href="/dashboard/marketplace" className="text-blue-600 hover:text-blue-700 text-sm">
-              查看全部 →
+            <h2 className="text-xl font-bold text-white font-mono">{'>'} Popular Scripts</h2>
+            <Link href="/dashboard/marketplace" className="text-green-400 hover:text-green-300 text-sm font-mono">
+              view_all -&gt;
             </Link>
           </div>
           {loading ? (
-            <p className="text-gray-500">加载中...</p>
+            <p className="text-gray-500 font-mono">loading...</p>
           ) : popularScripts.length === 0 ? (
-            <p className="text-gray-500">暂无脚本</p>
+            <p className="text-gray-500 font-mono">no scripts found</p>
           ) : (
             <div className="space-y-3">
               {popularScripts.map((script) => (
                 <div
                   key={script.id}
-                  className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors"
+                  className="border border-green-900/50 rounded-lg p-3 hover:border-green-500/50 transition-colors bg-[#0a0f0d]"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-sm">{script.name}</h3>
-                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">{script.description}</p>
+                      <h3 className="font-semibold text-sm text-green-400 font-mono">{script.name}</h3>
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{script.description}</p>
                       <div className="flex items-center gap-3 mt-2">
-                        <span className="text-xs px-2 py-1 bg-gray-100 rounded">
+                        <span className="text-xs px-2 py-1 bg-green-900/30 text-green-500 rounded font-mono">
                           {script.category || 'custom'}
                         </span>
-                        <span className="text-xs text-gray-500">
-                          ❤️ {script.likeCount || 0}
+                        <span className="text-xs text-gray-500 font-mono">
+                          +{script.likeCount || 0}
                         </span>
-                        <span className="text-xs text-gray-500">
-                          🔄 {script.usageCount || 0}
+                        <span className="text-xs text-gray-500 font-mono">
+                          x{script.usageCount || 0}
                         </span>
                       </div>
                     </div>
@@ -187,6 +177,18 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function StatCard({ label, value, icon }: { label: string; value: number | string; icon: string }) {
+  return (
+    <div className="terminal-card p-6 group hover:border-green-500/50 transition-all">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-green-500/70 text-sm font-mono">{label}:</h3>
+        <span className="text-green-700 group-hover:text-green-500 transition-colors">{icon}</span>
+      </div>
+      <p className="text-3xl font-bold text-[#00ff41] font-mono">{value}</p>
     </div>
   )
 }

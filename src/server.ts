@@ -1073,18 +1073,32 @@ app.post('/api/scripts/:id/execute', async (req, res) => {
     // 执行脚本中的所有命令
     const logs = [];
 
+    // 支持自定义 API 凭证
+    const customApiKey = req.headers['x-api-key'] as string;
+    const customBaseUrl = req.headers['x-api-base-url'] as string;
+    const customModel = req.headers['x-api-model'] as string;
+
+    const assistant = (customApiKey || customBaseUrl || customModel)
+      ? new ClaudeAssistant(
+          customApiKey || process.env.ANTHROPIC_API_KEY || '',
+          customBaseUrl || process.env.ANTHROPIC_BASE_URL || undefined,
+          customModel || undefined,
+          searchService
+        )
+      : claudeAssistant;
+
     // 如果是文档模式，使用 AI 读取文档并生成命令
     if (script.documentContent) {
       try {
         // 使用 AI 分析文档内容并生成执行计划
-        const aiPrompt = `请分析以下操作文档，提取出需要执行的命令列表。只返回命令，每行一个命令，不要有其他说明文字。
+        const aiPrompt = `Analyze the following document and extract the commands to execute. Return only the commands, one per line, no other text.
 
-文档内容：
+Document content:
 ${script.documentContent}
 
-请提取命令列表：`;
+Extract commands:`;
 
-        const aiResponse = await claudeAssistant.chat(aiPrompt, [], []);
+        const aiResponse = await assistant.chat(aiPrompt, [], []);
         const commandsText = aiResponse.trim();
         const extractedCommands = commandsText.split('\n').filter((cmd: string) => cmd.trim() && !cmd.startsWith('#'));
 
@@ -1370,7 +1384,7 @@ ${executionHistory.map((h, i) =>
 // 流式自动执行端点
 app.post('/api/sessions/:serverId/auto-execute/stream', async (req, res) => {
   try {
-    const { task } = req.body;
+    const { task, language } = req.body;
     const serverId = req.params.serverId;
 
     // 检查是否有自定义API凭证
@@ -1401,8 +1415,8 @@ app.post('/api/sessions/:serverId/auto-execute/stream', async (req, res) => {
     const systemInfo = await executor.execute('uname -a && cat /etc/os-release 2>/dev/null || echo "OS info not available"');
 
     // 创建流式执行器并执行
-    const streamExecutor = new AutoExecuteStream(connectionManager, assistant, res, marketplaceManager);
-    await streamExecutor.execute(server, task, systemInfo);
+    const streamExecutor = new AutoExecuteStream(connectionManager, assistant, res, marketplaceManager, searchService);
+    await streamExecutor.execute(server, task, systemInfo, language);
 
   } catch (error) {
     console.error('流式自动执行失败:', error);
@@ -1433,7 +1447,7 @@ app.delete('/api/sessions/:serverId', (req, res) => {
 
 app.post('/api/sessions/:serverId/chat', async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, language } = req.body;
     const serverId = req.params.serverId;
 
     // 检查是否有自定义API凭证
@@ -1469,7 +1483,8 @@ app.post('/api/sessions/:serverId/chat', async (req, res) => {
     const aiResponse = await assistant.chatWithSearch(
       message,
       session.messages,
-      session.commandHistory
+      session.commandHistory,
+      language
     );
 
     // 添加AI回复到会话
@@ -1491,7 +1506,7 @@ app.post('/api/sessions/:serverId/chat', async (req, res) => {
 // 流式聊天端点
 app.post('/api/sessions/:serverId/chat/stream', async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, language } = req.body;
     const serverId = req.params.serverId;
 
     // 设置SSE响应头
@@ -1532,7 +1547,7 @@ app.post('/api/sessions/:serverId/chat/stream', async (req, res) => {
     let fullResponse = '';
 
     // 流式输出
-    for await (const chunk of assistant.chatStream(message, session.messages, session.commandHistory)) {
+    for await (const chunk of assistant.chatStream(message, session.messages, session.commandHistory, language)) {
       fullResponse += chunk;
       res.write(`data: ${JSON.stringify({ chunk, done: false })}\n\n`);
     }
@@ -1743,7 +1758,7 @@ app.post('/api/cli/execute-task', async (req, res) => {
 // 第二层：AI解读和解决方案
 app.post('/api/cli/analyze-result', async (req, res) => {
   try {
-    const { task, executionResult, systemInfo } = req.body;
+    const { task, executionResult, systemInfo, language } = req.body;
 
     // 检查是否有自定义API凭证
     const customApiKey = req.headers['x-api-key'] as string;
@@ -1759,25 +1774,40 @@ app.post('/api/cli/analyze-result', async (req, res) => {
         )
       : claudeAssistant;
 
-    const analysisPrompt = `你是一个专业的系统管理顾问。请分析以下任务执行结果，提供详细的解读和建议。
+    // Language instruction mapping
+    const languageInstructions: { [key: string]: string } = {
+      'en': 'Respond in English.',
+      'zh': 'Respond in Chinese (中文回复).',
+      'ja': 'Respond in Japanese (日本語で回答してください).',
+      'ko': 'Respond in Korean (한국어로 답변해 주세요).',
+      'es': 'Respond in Spanish (Responde en español).',
+      'fr': 'Respond in French (Répondez en français).',
+      'de': 'Respond in German (Antworten Sie auf Deutsch).',
+      'ru': 'Respond in Russian (Отвечайте на русском языке).',
+    };
+    const langInstruction = language ? languageInstructions[language] || '' : '';
 
-## 用户任务
+    const analysisPrompt = `You are a professional system administration consultant. ${langInstruction}
+
+Please analyze the following task execution result and provide detailed interpretation and suggestions.
+
+## User Task
 ${task}
 
-## 系统信息
-${systemInfo || '未知'}
+## System Info
+${systemInfo || 'Unknown'}
 
-## 执行结果
+## Execution Result
 ${JSON.stringify(executionResult, null, 2)}
 
-请提供：
-1. **执行摘要**：简要说明执行了什么操作
-2. **结果分析**：分析每个步骤的执行结果
-3. **问题诊断**：如果有错误，分析原因
-4. **解决方案**：针对问题提供具体的解决步骤
-5. **后续建议**：任务完成后的优化建议
+Please provide:
+1. **Execution Summary**: Brief description of what was executed
+2. **Result Analysis**: Analysis of each step's execution result
+3. **Problem Diagnosis**: If there are errors, analyze the causes
+4. **Solutions**: Provide specific steps to resolve issues
+5. **Recommendations**: Optimization suggestions after task completion
 
-请以结构化的方式回答，使用markdown格式。`;
+Please respond in a structured way using markdown format.`;
 
     const analysis = await assistant.chat(analysisPrompt, [], []);
 

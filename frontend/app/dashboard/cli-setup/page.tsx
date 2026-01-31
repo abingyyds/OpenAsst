@@ -1,77 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { chatApi } from '@/lib/api/chat'
-
-interface CliStatus {
-  installed: boolean
-  version: string | null
-  configured: boolean
-  apiKeySynced: boolean
-  lastSync: string | null
-}
+import { useRouter } from 'next/navigation'
+import { serverApi, Server } from '@/lib/api/servers'
 
 export default function CLISetupPage() {
-  const [cliStatus, setCliStatus] = useState<CliStatus | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState(false)
-  const [currentStep, setCurrentStep] = useState(0)
+  const router = useRouter()
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
-  const [syncMessage, setSyncMessage] = useState<string | null>(null)
-
-  // 检查CLI状态
-  const checkCliStatus = async () => {
-    try {
-      const status = await chatApi.getCliStatus()
-      setCliStatus(status)
-
-      // 根据状态设置当前步骤
-      if (status.installed && status.apiKeySynced) {
-        setCurrentStep(6) // 全部完成
-      } else if (status.installed) {
-        setCurrentStep(5) // 需要同步配置
-      }
-    } catch (error) {
-      console.error('检查CLI状态失败:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    checkCliStatus()
-  }, [])
-
-  // 同步API配置
-  const syncConfig = async () => {
-    setSyncing(true)
-    setSyncMessage(null)
-
-    try {
-      // 从localStorage获取API配置
-      const apiKey = localStorage.getItem('anthropic_api_key')
-      const baseUrl = localStorage.getItem('anthropic_base_url')
-      const model = localStorage.getItem('anthropic_model')
-
-      if (!apiKey) {
-        setSyncMessage('请先在API设置页面配置API密钥')
-        return
-      }
-
-      const result = await chatApi.syncCliConfig({
-        apiKey,
-        baseUrl: baseUrl || undefined,
-        model: model || undefined
-      })
-
-      setSyncMessage(result.message)
-      await checkCliStatus()
-    } catch (error) {
-      setSyncMessage('同步失败: ' + (error as Error).message)
-    } finally {
-      setSyncing(false)
-    }
-  }
+  const [showServerModal, setShowServerModal] = useState(false)
+  const [servers, setServers] = useState<Server[]>([])
+  const [selectedServerId, setSelectedServerId] = useState('')
+  const [loadingServers, setLoadingServers] = useState(false)
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -79,200 +18,145 @@ export default function CLISetupPage() {
     setTimeout(() => setCopiedCommand(null), 2000)
   }
 
-  const installSteps = [
-    {
-      title: '检查 Node.js',
-      description: '确保已安装 Node.js 18+',
-      command: 'node --version'
-    },
-    {
-      title: '克隆项目',
-      description: '克隆 OpenAsst 仓库',
-      command: 'git clone https://github.com/your-repo/openasst.git'
-    },
-    {
-      title: '安装依赖',
-      description: '进入CLI目录并安装依赖',
-      command: 'cd openasst/cli && npm install'
-    },
-    {
-      title: '构建CLI',
-      description: '编译TypeScript',
-      command: 'npm run build'
-    },
-    {
-      title: '全局安装',
-      description: '链接到全局命令',
-      command: 'npm link'
-    },
-    {
-      title: '同步配置',
-      description: '将前端API配置同步到CLI',
-      command: null // 使用按钮
+  const loadServers = async () => {
+    setLoadingServers(true)
+    try {
+      const data = await serverApi.getAll()
+      setServers(data)
+    } catch (err) {
+      console.error('Failed to load servers:', err)
+    } finally {
+      setLoadingServers(false)
     }
-  ]
+  }
+
+  const handleAIInstall = () => {
+    setShowServerModal(true)
+    loadServers()
+  }
+
+  const handleConfirmInstall = () => {
+    if (!selectedServerId) return
+
+    // Store install task in sessionStorage
+    const installTask = `Install OpenAsst CLI on this server.
+
+Steps:
+1. Check if curl and bash are installed
+2. Run the install script: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+3. If the script fails, try manual installation:
+   - git clone https://github.com/abingyyds/OpenAsst.git
+   - cd OpenAsst/cli && npm install && npm run build && npm link
+4. Verify installation: openasst --version`
+
+    sessionStorage.setItem('pendingScript', JSON.stringify({
+      id: 'cli-install',
+      name: 'Install OpenAsst CLI',
+      description: 'AI-assisted CLI installation',
+      documentContent: installTask,
+      commands: []
+    }))
+
+    setShowServerModal(false)
+    router.push(`/dashboard/servers/${selectedServerId}`)
+  }
+
+  const oneLineInstall = 'curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash'
 
   const cliCommands = [
-    { cmd: 'openasst do "任务描述"', desc: '自然语言执行任务' },
-    { cmd: 'openasst assistant', desc: '交互式AI助手' },
-    { cmd: 'openasst analyze', desc: '分析当前项目' },
-    { cmd: 'openasst auto <git-url>', desc: '自动部署项目' },
-    { cmd: 'openasst deploy <doc>', desc: '从文档部署' },
-    { cmd: 'openasst market list', desc: '浏览脚本市场' }
+    { cmd: 'openasst do "task description"', desc: 'Execute task with natural language' },
+    { cmd: 'openasst assistant', desc: 'Interactive AI assistant' },
+    { cmd: 'openasst config', desc: 'Configure API key and settings' },
+    { cmd: 'openasst auto <git-url>', desc: 'Auto deploy from Git repo' },
+    { cmd: 'openasst deploy <doc-url>', desc: 'Deploy from documentation' },
+    { cmd: 'openasst api share', desc: 'Share API with Claude Code, Cursor' }
   ]
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">检查CLI状态...</div>
-      </div>
-    )
-  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">CLI 工具设置</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
-          安装 OpenAsst CLI，在终端中使用AI助手，与前端协同工作
+        <h1 className="text-3xl font-bold text-green-400 font-mono">&gt; CLI Setup</h1>
+        <p className="text-gray-500 mt-2 font-mono">
+          Install OpenAsst CLI for terminal-based AI assistance
         </p>
       </div>
 
-      {/* CLI状态卡片 */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">CLI 状态</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatusCard
-            label="安装状态"
-            value={cliStatus?.installed ? '已安装' : '未安装'}
-            status={cliStatus?.installed ? 'success' : 'warning'}
-          />
-          <StatusCard
-            label="版本"
-            value={cliStatus?.version || '-'}
-            status={cliStatus?.version ? 'success' : 'neutral'}
-          />
-          <StatusCard
-            label="配置同步"
-            value={cliStatus?.apiKeySynced ? '已同步' : '未同步'}
-            status={cliStatus?.apiKeySynced ? 'success' : 'warning'}
-          />
-          <StatusCard
-            label="上次同步"
-            value={cliStatus?.lastSync ? new Date(cliStatus.lastSync).toLocaleDateString() : '-'}
-            status="neutral"
-          />
-        </div>
-
-        {/* 同步按钮 */}
-        {cliStatus?.installed && (
-          <div className="mt-4 pt-4 border-t dark:border-gray-700">
+      {/* One-liner Install */}
+      <div className="terminal-card p-6 border-green-500/50">
+        <h2 className="text-xl font-bold mb-4 text-green-400 font-mono"># Quick Install</h2>
+        <div className="bg-[#0a0f0d] rounded-lg p-4 border border-green-900/50">
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-[#00ff41] font-mono text-sm break-all">
+              $ {oneLineInstall}
+            </code>
             <button
-              onClick={syncConfig}
-              disabled={syncing}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              onClick={() => copyToClipboard(oneLineInstall)}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 font-mono text-sm btn-glow whitespace-nowrap"
             >
-              {syncing ? '同步中...' : '同步API配置到CLI'}
+              {copiedCommand === oneLineInstall ? 'copied!' : 'copy'}
             </button>
-            {syncMessage && (
-              <p className={`mt-2 text-sm ${syncMessage.includes('失败') ? 'text-red-500' : 'text-green-500'}`}>
-                {syncMessage}
-              </p>
-            )}
+            <button
+              onClick={handleAIInstall}
+              className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-500 font-mono text-sm btn-glow whitespace-nowrap"
+            >
+              {'>'} ai_install
+            </button>
           </div>
-        )}
+        </div>
+        <p className="text-gray-500 text-sm mt-3 font-mono">
+          After install, run: <code className="text-green-400">openasst config</code> to set your API key
+        </p>
       </div>
 
-      {/* 安装步骤 */}
-      {!cliStatus?.installed && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold mb-4">安装步骤</h2>
-          <div className="space-y-4">
-            {installSteps.map((step, index) => (
-              <StepCard
-                key={index}
-                step={index + 1}
-                title={step.title}
-                description={step.description}
-                command={step.command}
-                isActive={index === currentStep}
-                isComplete={index < currentStep}
-                onCopy={copyToClipboard}
-                copied={copiedCommand === step.command}
-              />
-            ))}
+      {/* Features */}
+      <div className="terminal-card p-6">
+        <h2 className="text-xl font-bold mb-4 text-green-400 font-mono"># Features</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm font-mono">
+          <div className="bg-[#0a0f0d] p-3 rounded border border-green-900/50">
+            <span className="text-green-400">smart_task_engine</span>
+            <p className="text-gray-600 text-xs mt-1">Natural language execution</p>
           </div>
-
-          <div className="flex gap-2 mt-6">
-            <button
-              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-              disabled={currentStep === 0}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
-            >
-              上一步
-            </button>
-            <button
-              onClick={() => setCurrentStep(Math.min(installSteps.length - 1, currentStep + 1))}
-              disabled={currentStep === installSteps.length - 1}
-              className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
-            >
-              下一步
-            </button>
-            <button
-              onClick={checkCliStatus}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 ml-auto"
-            >
-              刷新状态
-            </button>
+          <div className="bg-[#0a0f0d] p-3 rounded border border-green-900/50">
+            <span className="text-green-400">security_guard</span>
+            <p className="text-gray-600 text-xs mt-1">Block dangerous commands</p>
           </div>
-        </div>
-      )}
-
-      {/* 两层架构说明 */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-6">
-        <h2 className="text-xl font-bold mb-4">两层智能架构</h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">1</span>
-              <h3 className="font-bold">CLI 执行层</h3>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              CLI工具负责智能任务执行：分析任务、规划步骤、执行命令、收集结果。
-              借鉴智能任务引擎，支持多轮迭代、错误恢复、安全检查。
-            </p>
+          <div className="bg-[#0a0f0d] p-3 rounded border border-green-900/50">
+            <span className="text-green-400">auto_recovery</span>
+            <p className="text-gray-600 text-xs mt-1">Intelligent error fixing</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold">2</span>
-              <h3 className="font-bold">前端解读层</h3>
-            </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              前端负责结果解读：分析执行结果、诊断问题、提供解决方案、给出优化建议。
-              为用户提供清晰的可视化反馈和专业的技术指导。
-            </p>
+          <div className="bg-[#0a0f0d] p-3 rounded border border-green-900/50">
+            <span className="text-green-400">api_sharing</span>
+            <p className="text-gray-600 text-xs mt-1">Share with Claude Code, Cursor</p>
+          </div>
+          <div className="bg-[#0a0f0d] p-3 rounded border border-green-900/50">
+            <span className="text-green-400">auto_deploy</span>
+            <p className="text-gray-600 text-xs mt-1">Deploy from Git or docs</p>
+          </div>
+          <div className="bg-[#0a0f0d] p-3 rounded border border-green-900/50">
+            <span className="text-green-400">cross_platform</span>
+            <p className="text-gray-600 text-xs mt-1">macOS, Linux, Windows</p>
           </div>
         </div>
       </div>
 
-      {/* CLI命令参考 */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">CLI 命令参考</h2>
-        <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+      {/* CLI Commands Reference */}
+      <div className="terminal-card p-6">
+        <h2 className="text-xl font-bold mb-4 text-green-400 font-mono"># Commands</h2>
+        <div className="bg-[#0a0f0d] rounded-lg p-4 overflow-x-auto border border-green-900/50">
           <table className="w-full text-sm font-mono">
             <tbody>
               {cliCommands.map((item, i) => (
-                <tr key={i} className="border-b border-gray-800 last:border-0">
+                <tr key={i} className="border-b border-green-900/30 last:border-0">
                   <td className="py-3 pr-4">
-                    <code className="text-cyan-400">{item.cmd}</code>
+                    <code className="text-[#00ff41]">{item.cmd}</code>
                   </td>
-                  <td className="py-3 text-gray-400">{item.desc}</td>
+                  <td className="py-3 text-gray-500">{item.desc}</td>
                   <td className="py-3 pl-4">
                     <button
                       onClick={() => copyToClipboard(item.cmd)}
-                      className="text-xs px-2 py-1 bg-gray-700 rounded hover:bg-gray-600"
+                      className="text-xs px-2 py-1 border border-green-900/50 text-green-500 rounded hover:bg-green-900/20"
                     >
-                      {copiedCommand === item.cmd ? '已复制' : '复制'}
+                      {copiedCommand === item.cmd ? 'ok' : 'cp'}
                     </button>
                   </td>
                 </tr>
@@ -281,74 +165,60 @@ export default function CLISetupPage() {
           </table>
         </div>
       </div>
-    </div>
-  )
-}
 
-// 状态卡片组件
-function StatusCard({ label, value, status }: {
-  label: string
-  value: string
-  status: 'success' | 'warning' | 'error' | 'neutral'
-}) {
-  const statusColors = {
-    success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-    error: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    neutral: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-  }
+      {/* GitHub Link */}
+      <div className="terminal-card p-6 text-center">
+        <a
+          href="https://github.com/abingyyds/OpenAsst"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded hover:bg-green-500 font-mono btn-glow"
+        >
+          &gt; view on GitHub
+        </a>
+      </div>
 
-  return (
-    <div className={`rounded-lg p-3 ${statusColors[status]}`}>
-      <div className="text-xs opacity-75">{label}</div>
-      <div className="font-bold">{value}</div>
-    </div>
-  )
-}
+      {/* Server Selection Modal */}
+      {showServerModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="terminal-card p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-green-400 font-mono"># Select Server</h2>
+            <p className="text-gray-500 mb-4 font-mono text-sm">
+              Choose a server to install OpenAsst CLI
+            </p>
 
-// 步骤卡片组件
-function StepCard({ step, title, description, command, isActive, isComplete, onCopy, copied }: {
-  step: number
-  title: string
-  description: string
-  command: string | null
-  isActive: boolean
-  isComplete: boolean
-  onCopy: (text: string) => void
-  copied: boolean
-}) {
-  return (
-    <div className={`border rounded-lg p-4 ${
-      isActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' :
-      isComplete ? 'border-green-500 bg-green-50 dark:bg-green-900/20' :
-      'border-gray-200 dark:border-gray-700'
-    }`}>
-      <div className="flex items-start gap-3">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-          isComplete ? 'bg-green-500 text-white' :
-          isActive ? 'bg-blue-500 text-white' :
-          'bg-gray-200 dark:bg-gray-700'
-        }`}>
-          {isComplete ? '✓' : step}
-        </div>
-        <div className="flex-1">
-          <h3 className="font-bold">{title}</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{description}</p>
-          {command && (
-            <div className="flex items-center gap-2">
-              <code className="flex-1 bg-gray-900 text-green-400 px-3 py-2 rounded font-mono text-sm">
-                $ {command}
-              </code>
+            <select
+              value={selectedServerId}
+              onChange={(e) => setSelectedServerId(e.target.value)}
+              className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 mb-4"
+              disabled={loadingServers}
+            >
+              <option value="">-- select server --</option>
+              {servers.map(server => (
+                <option key={server.id} value={server.id}>
+                  {server.name} ({server.host})
+                </option>
+              ))}
+            </select>
+
+            <div className="flex gap-3">
               <button
-                onClick={() => onCopy(command)}
-                className="px-3 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 text-sm"
+                onClick={() => setShowServerModal(false)}
+                className="flex-1 px-4 py-2 border border-green-900/50 text-gray-400 rounded hover:bg-green-900/20 font-mono"
               >
-                {copied ? '已复制' : '复制'}
+                cancel
+              </button>
+              <button
+                onClick={handleConfirmInstall}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-500 disabled:opacity-50 font-mono btn-glow"
+                disabled={!selectedServerId}
+              >
+                {'>'} install
               </button>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

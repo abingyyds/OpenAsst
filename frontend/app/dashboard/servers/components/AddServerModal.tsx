@@ -20,6 +20,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
     auth_type: 'password' as 'password' | 'privateKey',
     password: '',
     privateKeyPath: '',
+    saveCredentials: false, // 是否存储密码/密钥
     // Docker
     containerName: '',
     containerId: '',
@@ -200,6 +201,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
         submitData.port = formData.port
         submitData.username = formData.username
         submitData.authType = formData.auth_type
+        submitData.saveCredentials = formData.saveCredentials
         if (formData.auth_type === 'password') {
           submitData.password = formData.password
         } else {
@@ -253,6 +255,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
         auth_type: 'password',
         password: '',
         privateKeyPath: '',
+        saveCredentials: false,
         containerName: '',
         containerId: '',
         podName: '',
@@ -270,349 +273,368 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-4">添加连接</h2>
+    <div className="fixed inset-0 bg-black/80 flex items-start justify-center z-50 p-4 overflow-y-auto">
+      <div className="terminal-card p-6 w-full max-w-md my-8 relative">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-500 hover:text-green-400 font-mono text-xl"
+        >
+          ×
+        </button>
+        <h2 className="text-2xl font-bold mb-4 text-green-400 font-mono"># Add Connection</h2>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">
-            {error}
+          <div className="bg-red-900/30 border border-red-500/50 text-red-400 p-3 rounded mb-4 text-sm font-mono">
+            [ERROR] {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 连接名称 */}
+          {/* Connection Name */}
           <div>
-            <label className="block text-sm font-medium mb-1">连接名称</label>
+            <label className="block text-sm font-mono text-green-500 mb-2">name:</label>
             <input
               type="text"
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
-              placeholder="例如：生产服务器"
+              className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+              placeholder="e.g. production-server"
             />
           </div>
 
-          {/* 连接类型选择 */}
+          {/* Connection Type */}
           <div>
-            <label className="block text-sm font-medium mb-1">连接类型</label>
+            <label className="block text-sm font-mono text-green-500 mb-2">type:</label>
             <select
               value={connectionType}
               onChange={(e) => setConnectionType(e.target.value as ConnectionType)}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
             >
-              <option value="ssh">SSH 服务器</option>
-              <option value="local">本地终端</option>
-              <option value="docker">Docker 容器</option>
+              <option value="ssh">SSH Server</option>
+              <option value="local">Local Terminal</option>
+              <option value="docker">Docker Container</option>
               <option value="docker-remote">Docker Remote API</option>
               <option value="kubernetes">Kubernetes Pod</option>
-              <option value="wsl">WSL (Windows Subsystem for Linux)</option>
+              <option value="wsl">WSL</option>
             </select>
           </div>
 
-          {/* SSH 配置 */}
+          {/* SSH Config */}
           {connectionType === 'ssh' && (
             <>
               <div>
-                <label className="block text-sm font-medium mb-1">主机地址</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">host:</label>
                 <input
                   type="text"
                   required
                   value={formData.host}
                   onChange={(e) => setFormData({ ...formData, host: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="例如：192.168.1.100"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                  placeholder="192.168.1.100"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">端口</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">port:</label>
                 <input
                   type="number"
                   required
                   value={formData.port}
                   onChange={(e) => setFormData({ ...formData, port: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border rounded"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">用户名</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">username:</label>
                 <input
                   type="text"
                   required
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="例如：root"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                  placeholder="root"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">认证方式</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">auth_type:</label>
                 <select
                   value={formData.auth_type}
                   onChange={(e) => setFormData({ ...formData, auth_type: e.target.value as 'password' | 'privateKey' })}
-                  className="w-full px-3 py-2 border rounded"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
                 >
-                  <option value="password">密码</option>
-                  <option value="privateKey">私钥</option>
+                  <option value="password">password</option>
+                  <option value="privateKey">private_key</option>
                 </select>
               </div>
 
               {formData.auth_type === 'password' ? (
                 <div>
-                  <label className="block text-sm font-medium mb-1">密码</label>
+                  <label className="block text-sm font-mono text-green-500 mb-2">password:</label>
                   <input
                     type="password"
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 border rounded"
+                    className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
                   />
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm font-medium mb-1">私钥路径</label>
+                  <label className="block text-sm font-mono text-green-500 mb-2">key_path:</label>
                   <input
                     type="text"
                     required
                     value={formData.privateKeyPath}
                     onChange={(e) => setFormData({ ...formData, privateKeyPath: e.target.value })}
-                    className="w-full px-3 py-2 border rounded"
-                    placeholder="例如：~/.ssh/id_rsa"
+                    className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                    placeholder="~/.ssh/id_rsa"
                   />
                 </div>
               )}
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="saveCredentials"
+                  checked={formData.saveCredentials}
+                  onChange={(e) => setFormData({ ...formData, saveCredentials: e.target.checked })}
+                  className="w-4 h-4 accent-green-500"
+                />
+                <label htmlFor="saveCredentials" className="text-sm font-mono text-green-400">
+                  save credentials (store password/key locally)
+                </label>
+              </div>
             </>
           )}
 
-          {/* 本地终端配置 */}
+          {/* Local Terminal */}
           {connectionType === 'local' && (
-            <div className="bg-blue-50 p-3 rounded text-sm text-blue-700">
-              本地终端将直接在服务器上执行命令，无需额外配置。
+            <div className="bg-green-900/20 border border-green-500/30 p-3 rounded text-sm text-green-400 font-mono">
+              Local terminal executes commands directly on the server.
             </div>
           )}
 
-          {/* Docker 配置 */}
+          {/* Docker Config */}
           {connectionType === 'docker' && (
             <>
               <div>
-                <label className="block text-sm font-medium mb-1">容器名称</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">container_name:</label>
                 <input
                   type="text"
                   value={formData.containerName}
                   onChange={(e) => setFormData({ ...formData, containerName: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="例如：my-container"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                  placeholder="my-container"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">容器 ID（可选）</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">container_id: (optional)</label>
                 <input
                   type="text"
                   value={formData.containerId}
                   onChange={(e) => setFormData({ ...formData, containerId: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="例如：abc123def456"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                  placeholder="abc123def456"
                 />
               </div>
 
-              {/* 远程Docker选项 */}
+              {/* Remote Docker option */}
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="isRemoteDocker"
                   checked={formData.isRemoteDocker}
                   onChange={(e) => setFormData({ ...formData, isRemoteDocker: e.target.checked })}
-                  className="w-4 h-4"
+                  className="w-4 h-4 accent-green-500"
                 />
-                <label htmlFor="isRemoteDocker" className="text-sm font-medium">
-                  Docker在远程服务器上（通过SSH连接）
+                <label htmlFor="isRemoteDocker" className="text-sm font-mono text-green-400">
+                  Docker on remote server (via SSH)
                 </label>
               </div>
 
-              {/* 远程SSH配置 */}
+              {/* Remote SSH Config */}
               {formData.isRemoteDocker && (
-                <div className="border-l-4 border-blue-500 pl-4 space-y-3">
-                  <div className="text-sm font-medium text-blue-700">远程服务器SSH配置</div>
+                <div className="border-l-2 border-green-500 pl-4 space-y-3">
+                  <div className="text-sm font-mono text-green-400"># Remote SSH Config</div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">主机地址</label>
+                    <label className="block text-sm font-mono text-green-500 mb-2">host:</label>
                     <input
                       type="text"
                       required
                       value={formData.remoteHost}
                       onChange={(e) => setFormData({ ...formData, remoteHost: e.target.value })}
-                      className="w-full px-3 py-2 border rounded"
-                      placeholder="例如：192.168.1.100"
+                      className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                      placeholder="192.168.1.100"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">端口</label>
+                    <label className="block text-sm font-mono text-green-500 mb-2">port:</label>
                     <input
                       type="number"
                       required
                       value={formData.remotePort}
                       onChange={(e) => setFormData({ ...formData, remotePort: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border rounded"
+                      className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">用户名</label>
+                    <label className="block text-sm font-mono text-green-500 mb-2">username:</label>
                     <input
                       type="text"
                       required
                       value={formData.remoteUsername}
                       onChange={(e) => setFormData({ ...formData, remoteUsername: e.target.value })}
-                      className="w-full px-3 py-2 border rounded"
-                      placeholder="例如：root"
+                      className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                      placeholder="root"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">认证方式</label>
+                    <label className="block text-sm font-mono text-green-500 mb-2">auth_type:</label>
                     <select
                       value={formData.remoteAuthType}
                       onChange={(e) => setFormData({ ...formData, remoteAuthType: e.target.value as 'password' | 'privateKey' })}
-                      className="w-full px-3 py-2 border rounded"
+                      className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
                     >
-                      <option value="password">密码</option>
-                      <option value="privateKey">私钥</option>
+                      <option value="password">password</option>
+                      <option value="privateKey">private_key</option>
                     </select>
                   </div>
 
                   {formData.remoteAuthType === 'password' ? (
                     <div>
-                      <label className="block text-sm font-medium mb-1">密码</label>
+                      <label className="block text-sm font-mono text-green-500 mb-2">password:</label>
                       <input
                         type="password"
                         required
                         value={formData.remotePassword}
                         onChange={(e) => setFormData({ ...formData, remotePassword: e.target.value })}
-                        className="w-full px-3 py-2 border rounded"
+                        className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
                       />
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-sm font-medium mb-1">私钥路径</label>
+                      <label className="block text-sm font-mono text-green-500 mb-2">key_path:</label>
                       <input
                         type="text"
                         required
                         value={formData.remotePrivateKeyPath}
                         onChange={(e) => setFormData({ ...formData, remotePrivateKeyPath: e.target.value })}
-                        className="w-full px-3 py-2 border rounded"
-                        placeholder="例如：~/.ssh/id_rsa"
+                        className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                        placeholder="~/.ssh/id_rsa"
                       />
                     </div>
                   )}
                 </div>
               )}
 
-              <div className="bg-yellow-50 p-3 rounded text-sm text-yellow-700">
-                提示：容器名称和容器 ID 至少填写一个。{formData.isRemoteDocker && '远程Docker需要先SSH连接到服务器，再执行docker命令。'}
+              <div className="bg-yellow-900/20 border border-yellow-500/30 p-3 rounded text-sm text-yellow-400 font-mono">
+                Note: Provide container name or ID.{formData.isRemoteDocker && ' Remote Docker requires SSH first.'}
               </div>
             </>
           )}
 
-          {/* Docker Remote API 配置 */}
+          {/* Docker Remote API Config */}
           {connectionType === 'docker-remote' && (
             <>
               <div>
-                <label className="block text-sm font-medium mb-1">Docker API 主机地址</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">api_host:</label>
                 <input
                   type="text"
                   required
                   value={formData.dockerApiHost}
                   onChange={(e) => setFormData({ ...formData, dockerApiHost: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="例如：192.168.1.100"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                  placeholder="192.168.1.100"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Docker API 端口</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">api_port:</label>
                 <input
                   type="number"
                   required
                   value={formData.dockerApiPort}
                   onChange={(e) => setFormData({ ...formData, dockerApiPort: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="2376"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">协议</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">protocol:</label>
                 <select
                   value={formData.dockerApiProtocol}
                   onChange={(e) => setFormData({ ...formData, dockerApiProtocol: e.target.value as 'http' | 'https' })}
-                  className="w-full px-3 py-2 border rounded"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500"
                 >
-                  <option value="https">HTTPS (推荐)</option>
-                  <option value="http">HTTP</option>
+                  <option value="https">https (recommended)</option>
+                  <option value="http">http</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">容器名称</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">container_name:</label>
                 <input
                   type="text"
                   value={formData.containerName}
                   onChange={(e) => setFormData({ ...formData, containerName: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="例如：my-container"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                  placeholder="my-container"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">容器 ID（可选）</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">container_id: (optional)</label>
                 <input
                   type="text"
                   value={formData.containerId}
                   onChange={(e) => setFormData({ ...formData, containerId: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="例如：abc123def456"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                  placeholder="abc123def456"
                 />
               </div>
 
-              {/* TLS 证书配置（可选） */}
+              {/* TLS Config */}
               {formData.dockerApiProtocol === 'https' && (
-                <div className="border-l-4 border-blue-500 pl-4 space-y-3">
-                  <div className="text-sm font-medium text-blue-700">TLS 证书配置（可选）</div>
+                <div className="border-l-2 border-green-500 pl-4 space-y-3">
+                  <div className="text-sm font-mono text-green-400"># TLS Config (optional)</div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">CA 证书</label>
+                    <label className="block text-sm font-mono text-green-500 mb-2">ca_cert:</label>
                     <textarea
                       value={formData.dockerTlsCa}
                       onChange={(e) => setFormData({ ...formData, dockerTlsCa: e.target.value })}
-                      className="w-full px-3 py-2 border rounded font-mono text-xs"
+                      className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono text-xs focus:outline-none focus:border-green-500 placeholder-gray-600"
                       rows={3}
                       placeholder="-----BEGIN CERTIFICATE-----"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">客户端证书</label>
+                    <label className="block text-sm font-mono text-green-500 mb-2">client_cert:</label>
                     <textarea
                       value={formData.dockerTlsCert}
                       onChange={(e) => setFormData({ ...formData, dockerTlsCert: e.target.value })}
-                      className="w-full px-3 py-2 border rounded font-mono text-xs"
+                      className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono text-xs focus:outline-none focus:border-green-500 placeholder-gray-600"
                       rows={3}
                       placeholder="-----BEGIN CERTIFICATE-----"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">客户端私钥</label>
+                    <label className="block text-sm font-mono text-green-500 mb-2">client_key:</label>
                     <textarea
                       value={formData.dockerTlsKey}
                       onChange={(e) => setFormData({ ...formData, dockerTlsKey: e.target.value })}
-                      className="w-full px-3 py-2 border rounded font-mono text-xs"
+                      className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono text-xs focus:outline-none focus:border-green-500 placeholder-gray-600"
                       rows={3}
                       placeholder="-----BEGIN PRIVATE KEY-----"
                     />
@@ -620,111 +642,111 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
                 </div>
               )}
 
-              <div className="bg-yellow-50 p-3 rounded text-sm text-yellow-700">
-                提示：Docker Remote API 通过 TCP 端口直接连接到 Docker，无需 SSH。容器名称和容器 ID 至少填写一个。
+              <div className="bg-yellow-900/20 border border-yellow-500/30 p-3 rounded text-sm text-yellow-400 font-mono">
+                Note: Docker Remote API connects via TCP. Provide container name or ID.
               </div>
             </>
           )}
 
-          {/* Kubernetes 配置 */}
+          {/* Kubernetes Config */}
           {connectionType === 'kubernetes' && (
             <>
               <div>
-                <label className="block text-sm font-medium mb-1">Pod 名称</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">pod_name:</label>
                 <input
                   type="text"
                   required
                   value={formData.podName}
                   onChange={(e) => setFormData({ ...formData, podName: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="例如：my-pod-abc123"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                  placeholder="my-pod-abc123"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">命名空间</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">namespace:</label>
                 <input
                   type="text"
                   value={formData.namespace}
                   onChange={(e) => setFormData({ ...formData, namespace: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
                   placeholder="default"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">容器名称（可选）</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">container: (optional)</label>
                 <input
                   type="text"
                   value={formData.containerName}
                   onChange={(e) => setFormData({ ...formData, containerName: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="如果 Pod 有多个容器，请指定"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                  placeholder="specify if pod has multiple containers"
                 />
               </div>
             </>
           )}
 
-          {/* WSL 配置 */}
+          {/* WSL Config */}
           {connectionType === 'wsl' && (
             <>
               <div>
-                <label className="block text-sm font-medium mb-1">发行版名称</label>
+                <label className="block text-sm font-mono text-green-500 mb-2">distribution:</label>
                 <input
                   type="text"
                   value={formData.distributionName}
                   onChange={(e) => setFormData({ ...formData, distributionName: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
-                  placeholder="例如：Ubuntu"
+                  className="w-full px-4 py-2 bg-[#0a0f0d] border border-green-900/50 rounded text-green-100 font-mono focus:outline-none focus:border-green-500 placeholder-gray-600"
+                  placeholder="Ubuntu"
                 />
               </div>
 
-              <div className="bg-blue-50 p-3 rounded text-sm text-blue-700">
-                提示：使用 <code className="bg-blue-100 px-1 rounded">wsl -l</code> 命令查看已安装的发行版。
+              <div className="bg-green-900/20 border border-green-500/30 p-3 rounded text-sm text-green-400 font-mono">
+                Tip: Run <code className="bg-green-900/50 px-1 rounded">wsl -l</code> to list installed distributions.
               </div>
             </>
           )}
 
-          {/* 测试连接结果 */}
+          {/* Test Result */}
           {testResult && (
-            <div className={`p-3 rounded text-sm ${
+            <div className={`p-3 rounded text-sm font-mono ${
               testResult.success
-                ? 'bg-green-50 text-green-700 border border-green-200'
-                : 'bg-red-50 text-red-700 border border-red-200'
+                ? 'bg-green-900/30 text-green-400 border border-green-500/50'
+                : 'bg-red-900/30 text-red-400 border border-red-500/50'
             }`}>
-              {testResult.success ? '✓ ' : '✗ '}
+              {testResult.success ? '[OK] ' : '[FAIL] '}
               {testResult.message}
             </div>
           )}
 
-          {/* 测试连接按钮 */}
+          {/* Test Connection Button */}
           <div className="pt-2">
             <button
               type="button"
               onClick={handleTestConnection}
-              className="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:opacity-50"
+              className="w-full px-4 py-2 bg-gray-800 border border-green-900/50 text-green-400 rounded hover:bg-gray-700 disabled:opacity-50 font-mono"
               disabled={loading || testLoading}
             >
-              {testLoading ? '测试中...' : '🔌 测试连接'}
+              {testLoading ? 'testing...' : '> test_connection'}
             </button>
           </div>
 
-          {/* 按钮 */}
+          {/* Buttons */}
           <div className="flex gap-2 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border rounded hover:bg-gray-50"
+              className="flex-1 px-4 py-2 border border-green-900/50 text-gray-400 rounded hover:bg-green-900/20 font-mono"
               disabled={loading}
             >
-              取消
+              cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500 disabled:opacity-50 font-mono btn-glow"
               disabled={loading}
             >
-              {loading ? '添加中...' : '添加'}
+              {loading ? 'adding...' : '> add'}
             </button>
           </div>
         </form>

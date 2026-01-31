@@ -1,12 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ThemeProvider } from '@/contexts/ThemeContext'
-import ThemeToggle from '@/components/ThemeToggle'
 import { NotificationProvider } from '@/contexts/NotificationContext'
+import { LanguageProvider } from '@/contexts/LanguageContext'
 import NotificationContainer from '@/components/NotificationContainer'
+
+const navItems = [
+  { href: '/dashboard', icon: '>', label: 'Dashboard' },
+  { href: '/dashboard/servers', icon: '#', label: 'Servers' },
+  { href: '/dashboard/marketplace', icon: '$', label: 'Marketplace' },
+  { href: '/dashboard/cli-setup', icon: '@', label: 'CLI Setup' },
+  { href: '/dashboard/settings', icon: '*', label: 'Settings' },
+]
 
 export default function DashboardLayout({
   children,
@@ -14,6 +22,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const pathname = usePathname()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -21,49 +30,60 @@ export default function DashboardLayout({
   }
 
   return (
-    <NotificationProvider>
-      <ThemeProvider>
-        <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-          {/* 侧边栏 */}
-          <aside className="w-64 bg-white dark:bg-gray-800 shadow-lg flex flex-col">
-            <div className="p-6 flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">OpenAsst</h1>
-              <ThemeToggle />
-            </div>
-            <nav className="mt-6 flex-1">
-              <Link href="/dashboard" className="block px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700">
-                📊 仪表板
-              </Link>
-              <Link href="/dashboard/servers" className="block px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700">
-                🔌 连接管理
-              </Link>
-              <Link href="/dashboard/marketplace" className="block px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700">
-                🛒 命令市场
-              </Link>
-              <Link href="/dashboard/cli-setup" className="block px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700">
-                🖥️ CLI工具
-              </Link>
-              <Link href="/dashboard/settings" className="block px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700">
-                ⚙️ API设置
-              </Link>
+    <LanguageProvider>
+      <NotificationProvider>
+        <ThemeProvider>
+          <div className="flex h-screen bg-[#0a0f0d]">
+            {/* Sidebar */}
+            <aside className="w-64 bg-[#0d1512] border-r border-green-900/30 flex flex-col">
+              <div className="p-6 border-b border-green-900/30">
+                <Link href="/dashboard" className="block">
+                  <h1 className="text-2xl font-bold">
+                    <span className="text-white">Open</span>
+                    <span className="text-[#00ff41] glow-text">Asst</span>
+                  </h1>
+                </Link>
+                <p className="text-green-600 text-xs font-mono mt-2">v1.0.0 • online</p>
+              </div>
+
+            <nav className="flex-1 py-4">
+              {navItems.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-6 py-3 font-mono text-sm transition-all ${
+                      isActive
+                        ? 'text-[#00ff41] bg-green-900/20 border-r-2 border-green-500'
+                        : 'text-gray-400 hover:text-green-400 hover:bg-green-900/10'
+                    }`}
+                  >
+                    <span className={isActive ? 'text-green-500' : 'text-green-700'}>{item.icon}</span>
+                    {item.label}
+                  </Link>
+                )
+              })}
             </nav>
-            <div className="p-6 border-t dark:border-gray-700">
+
+            <div className="p-4 border-t border-green-900/30">
               <button
                 onClick={handleLogout}
-                className="w-full px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-400 rounded"
+                className="w-full px-4 py-2 text-gray-500 hover:text-red-400 hover:bg-red-900/10 rounded font-mono text-sm transition-all"
               >
-                🚪 登出
+                {'>'} logout
               </button>
             </div>
           </aside>
 
-          {/* 主内容区 */}
-          <main className="flex-1 overflow-auto p-8 dark:text-gray-100">
+          {/* Main Content */}
+          <main className="flex-1 overflow-auto p-8 grid-pattern">
             {children}
           </main>
         </div>
         <NotificationContainer />
-      </ThemeProvider>
-    </NotificationProvider>
+        </ThemeProvider>
+      </NotificationProvider>
+    </LanguageProvider>
   )
 }
