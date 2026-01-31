@@ -3,6 +3,7 @@ import { ConfigManager } from '../utils/config';
 import { Logger } from '../utils/logger';
 import { SmartTaskEngine, SmartTaskResult } from '../core/smart-task-engine';
 import { ResultPresenter, NextStep } from '../core/result-presenter';
+import { Marketplace } from '../core/marketplace';
 
 interface DoOptions {
   yes?: boolean;
@@ -19,13 +20,39 @@ export async function doCommand(task: string, options: DoOptions): Promise<void>
 
   const engine = new SmartTaskEngine(config);
   const presenter = new ResultPresenter();
+  const marketplace = new Marketplace();
 
   Logger.info('\n========================================');
   Logger.info('  SMART TASK ENGINE');
   Logger.info('========================================\n');
 
-  // Execute the task
-  const result = await engine.executeTask(task, {
+  // Check marketplace for relevant scripts
+  const relevantScripts = marketplace.search(task);
+  let scriptContext = '';
+
+  if (relevantScripts.length > 0) {
+    Logger.info(`Found ${relevantScripts.length} relevant script(s) in marketplace:\n`);
+
+    relevantScripts.forEach((script, i) => {
+      Logger.info(`  [${i + 1}] ${script.name}: ${script.description}`);
+    });
+    console.log('');
+
+    // Use the first matching script's content as context
+    const bestMatch = relevantScripts[0];
+    if (bestMatch.documentContent) {
+      scriptContext = `\n\nReference documentation from marketplace script "${bestMatch.name}":\n${bestMatch.documentContent}`;
+      Logger.info(`Using script: ${bestMatch.name}\n`);
+    } else if (bestMatch.commands && bestMatch.commands.length > 0) {
+      scriptContext = `\n\nReference commands from marketplace script "${bestMatch.name}":\n${bestMatch.commands.join('\n')}`;
+      Logger.info(`Using script: ${bestMatch.name}\n`);
+    }
+  }
+
+  // Execute the task with script context
+  const taskWithContext = scriptContext ? `${task}${scriptContext}` : task;
+
+  const result = await engine.executeTask(taskWithContext, {
     autoConfirm: options.yes || false,
     workingDir: options.dir || process.cwd(),
     verbose: options.verbose !== false
