@@ -36,6 +36,27 @@ export class KnowledgeManager {
     return data || [];
   }
 
+  // 获取索引
+  async getIndex(): Promise<{ categories: string[]; total: number }> {
+    const { data } = await supabase
+      .from('knowledge_items')
+      .select('category');
+
+    const categories = [...new Set((data || []).map(d => d.category))];
+    return { categories, total: data?.length || 0 };
+  }
+
+  // 获取分类下的项目
+  async getCategoryItems(categoryId: string): Promise<KnowledgeItem[]> {
+    const { data, error } = await supabase
+      .from('knowledge_items')
+      .select('*')
+      .eq('category', categoryId);
+
+    if (error) return [];
+    return data || [];
+  }
+
   // 搜索知识库
   async search(query: string): Promise<KnowledgeItem[]> {
     const queryLower = query.toLowerCase();
@@ -73,6 +94,16 @@ export class KnowledgeManager {
       return null;
     }
     return data;
+  }
+
+  // 删除知识
+  async deleteItem(category: string, id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('knowledge_items')
+      .delete()
+      .eq('id', id);
+
+    return !error;
   }
 
   // AI 自动学习
@@ -115,5 +146,17 @@ export class KnowledgeManager {
     if (text.includes('port') || text.includes('network') || text.includes('ping')) return 'network';
     if (text.includes('disk') || text.includes('memory') || text.includes('cpu')) return 'system';
     return 'custom';
+  }
+
+  // 同步到 GitHub (暂时返回成功，后续实现 GitHub API)
+  async syncToGitHub(): Promise<{ success: boolean; message: string }> {
+    // TODO: 使用 GitHub API 同步
+    return { success: true, message: 'Sync scheduled' };
+  }
+
+  // 从市场同步 (暂时返回0，后续实现)
+  async syncFromMarketplace(): Promise<number> {
+    // TODO: 从 script_templates 同步到 knowledge_items
+    return 0;
   }
 }

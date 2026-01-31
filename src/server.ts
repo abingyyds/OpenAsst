@@ -1975,9 +1975,9 @@ app.get('/api/knowledge/search', (req, res) => {
 });
 
 // Get knowledge index
-app.get('/api/knowledge/index', (req, res) => {
+app.get('/api/knowledge/index', async (req, res) => {
   try {
-    const index = knowledgeManager.getIndex();
+    const index = await knowledgeManager.getIndex();
     res.json(index);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
@@ -1985,9 +1985,9 @@ app.get('/api/knowledge/index', (req, res) => {
 });
 
 // Get category items
-app.get('/api/knowledge/category/:id', (req, res) => {
+app.get('/api/knowledge/category/:id', async (req, res) => {
   try {
-    const items = knowledgeManager.getCategoryItems(req.params.id);
+    const items = await knowledgeManager.getCategoryItems(req.params.id);
     res.json(items);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
@@ -1995,9 +1995,9 @@ app.get('/api/knowledge/category/:id', (req, res) => {
 });
 
 // Add knowledge item
-app.post('/api/knowledge/:category', (req, res) => {
+app.post('/api/knowledge/:category', async (req, res) => {
   try {
-    const item = knowledgeManager.addItem(req.params.category, req.body);
+    const item = await knowledgeManager.addItem(req.params.category, req.body);
     res.json(item);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
@@ -2005,9 +2005,9 @@ app.post('/api/knowledge/:category', (req, res) => {
 });
 
 // Delete knowledge item
-app.delete('/api/knowledge/:category/:id', (req, res) => {
+app.delete('/api/knowledge/:category/:id', async (req, res) => {
   try {
-    const success = knowledgeManager.deleteItem(req.params.category, req.params.id);
+    const success = await knowledgeManager.deleteItem(req.params.category, req.params.id);
     res.json({ success });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
@@ -2025,9 +2025,9 @@ app.post('/api/knowledge/sync', async (req, res) => {
 });
 
 // Sync from Marketplace - 从命令市场同步到知识库
-app.post('/api/knowledge/sync-marketplace', (req, res) => {
+app.post('/api/knowledge/sync-marketplace', async (req, res) => {
   try {
-    const synced = knowledgeManager.syncFromMarketplace();
+    const synced = await knowledgeManager.syncFromMarketplace();
     res.json({ success: true, synced, message: `Synced ${synced} items from marketplace` });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
@@ -2035,10 +2035,10 @@ app.post('/api/knowledge/sync-marketplace', (req, res) => {
 });
 
 // AI自动学习 - 从执行结果中学习
-app.post('/api/knowledge/learn', (req, res) => {
+app.post('/api/knowledge/learn', async (req, res) => {
   try {
     const { task, commands, result, success } = req.body;
-    const item = knowledgeManager.learnFromExecution(task, commands, result, success);
+    const item = await knowledgeManager.learnFromExecution(task, commands, result, success);
     if (item) {
       res.json({ success: true, learned: true, item });
     } else {
@@ -2065,6 +2065,7 @@ app.listen(port, () => {
   }, 60 * 60 * 1000); // 1 hour
 
   // 启动时同步一次Marketplace到知识库
-  const synced = knowledgeManager.syncFromMarketplace();
-  console.log(`[Startup] Synced ${synced} items from marketplace to knowledge base`);
+  knowledgeManager.syncFromMarketplace().then(synced => {
+    console.log(`[Startup] Synced ${synced} items from marketplace to knowledge base`);
+  });
 });
