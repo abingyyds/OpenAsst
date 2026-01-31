@@ -183,18 +183,44 @@ export class AutoExecuteStream {
         let knowledgeBaseResults: any[] = [];
 
         if (currentIteration === 1) {
-          const softwareName = task.replace(/安装|install|部署|deploy/gi, '').trim();
+          // Extract script name from task - remove common prefixes
+          let softwareName = task
+            .replace(/^Execute script:\s*/i, '')  // Remove "Execute script:" prefix
+            .replace(/^执行脚本:\s*/i, '')  // Remove Chinese prefix
+            .replace(/安装教程|安装指南|installation guide/gi, '')  // Remove tutorial suffixes
+            .replace(/安装|install|部署|deploy/gi, '')
+            .trim();
 
-          // 1. 优先查询命令市场
+          // If still has duplicates like "OpenClaw OpenClaw", take first part
+          const parts = softwareName.split(/\s+/);
+          if (parts.length > 1 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
+            softwareName = parts[0];
+          }
+
+          // Also search with original script name for better matching
+          const originalScriptName = task
+            .replace(/^Execute script:\s*/i, '')
+            .replace(/^执行脚本:\s*/i, '')
+            .split(/\s+/)[0]  // Take first word/name
+            .trim();
+
+          // 1. 优先查询命令市场 - 先用原始脚本名搜索
           this.sendEvent('status', { message: 'Searching marketplace...' });
-          relatedScripts = await this.marketplaceManager.searchTemplates(softwareName);
+          relatedScripts = await this.marketplaceManager.searchTemplates(originalScriptName);
+          // 如果没找到，用处理后的名称再搜索
+          if (relatedScripts.length === 0 && softwareName !== originalScriptName) {
+            relatedScripts = await this.marketplaceManager.searchTemplates(softwareName);
+          }
           if (relatedScripts.length > 0) {
             this.sendEvent('status', { message: `Found ${relatedScripts.length} scripts in marketplace` });
           }
 
-          // 2. 查询远程知识库
+          // 2. 查询远程知识库 - 同样先用原始名称
           this.sendEvent('status', { message: 'Fetching knowledge base...' });
-          knowledgeBaseResults = await this.fetchKnowledgeBase(softwareName);
+          knowledgeBaseResults = await this.fetchKnowledgeBase(originalScriptName);
+          if (knowledgeBaseResults.length === 0 && softwareName !== originalScriptName) {
+            knowledgeBaseResults = await this.fetchKnowledgeBase(softwareName);
+          }
           if (knowledgeBaseResults.length > 0) {
             this.sendEvent('status', { message: `Found ${knowledgeBaseResults.length} knowledge entries` });
           }
