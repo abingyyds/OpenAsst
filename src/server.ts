@@ -45,7 +45,8 @@ const marketplaceManager = new MarketplaceManager(dataDir);
 const knowledgeManager = new KnowledgeManager(
   process.env.REPO_DIR || '.',
   process.env.GITHUB_TOKEN,
-  process.env.GITHUB_REPO
+  process.env.GITHUB_REPO,
+  dataDir
 );
 
 const serversFile = path.join(dataDir, 'servers.json');
@@ -1946,6 +1947,31 @@ app.post('/api/knowledge/sync', async (req, res) => {
   try {
     const result = await knowledgeManager.syncToGitHub();
     res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Sync from Marketplace - 从命令市场同步到知识库
+app.post('/api/knowledge/sync-marketplace', (req, res) => {
+  try {
+    const synced = knowledgeManager.syncFromMarketplace();
+    res.json({ success: true, synced, message: `Synced ${synced} items from marketplace` });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// AI自动学习 - 从执行结果中学习
+app.post('/api/knowledge/learn', (req, res) => {
+  try {
+    const { task, commands, result, success } = req.body;
+    const item = knowledgeManager.learnFromExecution(task, commands, result, success);
+    if (item) {
+      res.json({ success: true, learned: true, item });
+    } else {
+      res.json({ success: true, learned: false, message: 'Already exists or failed execution' });
+    }
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
