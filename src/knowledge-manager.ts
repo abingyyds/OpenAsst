@@ -1,10 +1,5 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { CommandScript } from './types';
-
-const execAsync = promisify(exec);
+import { supabase } from './supabase';
+import axios from 'axios';
 
 export interface KnowledgeItem {
   id: string;
@@ -13,209 +8,92 @@ export interface KnowledgeItem {
   solution: string;
   commands: string[];
   category?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface KnowledgeCategory {
-  id: string;
-  name: string;
-  description: string;
-}
-
-export interface KnowledgeIndex {
-  version: string;
-  lastUpdated: string;
-  categories: KnowledgeCategory[];
-  files: string[];
+  synced_to_github?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export class KnowledgeManager {
-  private knowledgeDir: string;
-  private repoDir: string;
-  private dataDir: string;
   private githubToken?: string;
   private githubRepo?: string;
 
-  constructor(repoDir: string, githubToken?: string, githubRepo?: string, dataDir?: string) {
-    this.repoDir = repoDir;
-    this.knowledgeDir = path.join(repoDir, 'knowledge');
-    this.dataDir = dataDir || './data';
-    this.githubToken = githubToken;
-    this.githubRepo = githubRepo;
+  constructor(githubToken?: string, githubRepo?: string) {
+    this.githubToken = githubToken || process.env.GITHUB_TOKEN;
+    this.githubRepo = githubRepo || process.env.GITHUB_REPO || 'abingyyds/OpenAsst';
+  }
 
-    if (!fs.existsSync(this.knowledgeDir)) {
-      fs.mkdirSync(this.knowledgeDir, { recursive: true });
+  // 获取所有知识
+  async getAllItems(): Promise<KnowledgeItem[]> {
+    const { data, error } = await supabase
+      .from('knowledge_items')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('获取知识库失败:', error);
+      return [];
     }
+    return data || [];
   }
 
-  // Get index
-  getIndex(): KnowledgeIndex {
-    const indexPath = path.join(this.knowledgeDir, 'index.json');
-    if (fs.existsSync(indexPath)) {
-      return JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
-    }
-    return {
-      version: '1.0.0',
-      lastUpdated: new Date().toISOString(),
-      categories: [],
-      files: []
-    };
-  }
-
-  // Save index
-  private saveIndex(index: KnowledgeIndex): void {
-    index.lastUpdated = new Date().toISOString();
-    const indexPath = path.join(this.knowledgeDir, 'index.json');
-    fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
-  }
-
-  // Get all items from a category
-  getCategoryItems(categoryId: string): KnowledgeItem[] {
-    const filePath = path.join(this.knowledgeDir, `${categoryId}.json`);
-    if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-      return data.items || [];
-    }
-    return [];
-  }
-
-  // Get all items
-  getAllItems(): KnowledgeItem[] {
-    const index = this.getIndex();
-    const allItems: KnowledgeItem[] = [];
-
-    for (const file of index.files) {
-      const filePath = path.join(this.knowledgeDir, file);
-      if (fs.existsSync(filePath)) {
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-        const items = (data.items || []).map((item: KnowledgeItem) => ({
-          ...item,
-          category: data.category
-        }));
-        allItems.push(...items);
-      }
-    }
-
-    return allItems;
-  }
-
-  // Search knowledge base
-  search(query: string): KnowledgeItem[] {
-    const allItems = this.getAllItems();
+  // 搜索知识库
+  async search(query: string): Promise<KnowledgeItem[]> {
     const queryLower = query.toLowerCase();
+    const { data, error } = await supabase
+      .from('knowledge_items')
+      .select('*');
 
-    return allItems.filter(item => {
-      const titleMatch = item.title.toLowerCase().includes(queryLower);
-      const keywordMatch = item.keywords.some(k => k.toLowerCase().includes(queryLower));
-      const solutionMatch = item.solution.toLowerCase().includes(queryLower);
+    if (error) return [];
+
+    return (data || []).filter(item => {
+      const titleMatch = item.title?.toLowerCase().includes(queryLower);
+      const keywordMatch = item.keywords?.some((k: string) => k.toLowerCase().includes(queryLower));
+      const solutionMatch = item.solution?.toLowerCase().includes(queryLower);
       return titleMatch || keywordMatch || solutionMatch;
     });
   }
 
-  // Update index
-  private updateIndex(categoryId: string): void {
-    const index = this.getIndex();
-    const fileName = `${categoryId}.json`;
-    if (!index.files.includes(fileName)) {
-      index.files.push(fileName);
+  // 添加知识
+  async addItem(category: string, item: Omit<KnowledgeItem, 'id'>): Promise<KnowledgeItem | null> {
+    const { data, error } = await supabase
+      .from('knowledge_items')
+      .insert({
+        category,
+        title: item.title,
+        keywords: item.keywords || [],
+        solution: item.solution,
+        commands: item.commands || [],
+        synced_to_github: false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('添加知识失败:', error);
+      return null;
     }
-    this.saveIndex(index);
+    return data;
   }
 
-  // Add item
-  addItem(categoryId: string, item: Omit<KnowledgeItem, 'id'>): KnowledgeItem {
-    const filePath = path.join(this.knowledgeDir, `${categoryId}.json`);
-    let data = { category: categoryId, items: [] as KnowledgeItem[] };
+  // AI 自动学习
+  async learnFromExecution(task: string, commands: string[], result: string, success: boolean): Promise<KnowledgeItem | null> {
+    if (!success) return null;
 
-    if (fs.existsSync(filePath)) {
-      data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    }
-
-    const newItem: KnowledgeItem = {
-      ...item,
-      id: `${categoryId}-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    data.items.push(newItem);
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    this.updateIndex(categoryId);
-    return newItem;
-  }
-
-  // Delete item
-  deleteItem(categoryId: string, itemId: string): boolean {
-    const filePath = path.join(this.knowledgeDir, `${categoryId}.json`);
-    if (!fs.existsSync(filePath)) return false;
-
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    const index = data.items.findIndex((i: KnowledgeItem) => i.id === itemId);
-    if (index === -1) return false;
-
-    data.items.splice(index, 1);
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    return true;
-  }
-
-  // Sync from Marketplace - 从命令市场同步到知识库
-  syncFromMarketplace(): number {
-    const scriptsFile = path.join(this.dataDir, 'scripts.json');
-    if (!fs.existsSync(scriptsFile)) return 0;
-
-    const scripts: CommandScript[] = JSON.parse(fs.readFileSync(scriptsFile, 'utf-8'));
-    let synced = 0;
-
-    for (const script of scripts) {
-      const category = script.category || 'custom';
-      const item: Omit<KnowledgeItem, 'id'> = {
-        title: script.name,
-        keywords: script.tags || [],
-        solution: script.description + (script.documentContent ? '\n\n' + script.documentContent : ''),
-        commands: script.commands || [],
-        createdAt: script.createdAt,
-        updatedAt: script.updatedAt
-      };
-
-      // Check if already exists
-      const existing = this.getCategoryItems(category);
-      const exists = existing.some(e => e.title === item.title);
-
-      if (!exists) {
-        this.addItem(category, item);
-        synced++;
-      }
-    }
-
-    return synced;
-  }
-
-  // AI自动学习 - 从执行结果中提取知识
-  learnFromExecution(task: string, commands: string[], result: string, success: boolean): KnowledgeItem | null {
-    if (!success) return null; // 只学习成功的执行
-
-    // 提取关键词
     const keywords = this.extractKeywords(task);
-
-    // 确定分类
     const category = this.detectCategory(task, commands);
 
-    const item: Omit<KnowledgeItem, 'id'> = {
-      title: task.substring(0, 100),
-      keywords,
-      solution: `Task: ${task}\n\nSolution:\n${commands.join('\n')}\n\nResult:\n${result.substring(0, 500)}`,
-      commands,
-      createdAt: new Date().toISOString()
-    };
-
-    // 检查是否已存在类似知识
-    const existing = this.search(task);
-    if (existing.length > 0 && existing[0].title === item.title) {
-      return null; // 已存在
+    // 检查是否已存在
+    const existing = await this.search(task);
+    if (existing.length > 0 && existing[0].title === task.substring(0, 100)) {
+      return null;
     }
 
-    return this.addItem(category, item);
+    return this.addItem(category, {
+      title: task.substring(0, 100),
+      keywords,
+      solution: `Task: ${task}\n\nCommands:\n${commands.join('\n')}\n\nResult:\n${result.substring(0, 500)}`,
+      commands
+    });
   }
 
   // 提取关键词
@@ -224,7 +102,6 @@ export class KnowledgeManager {
       .replace(/[^a-z0-9\s]/g, ' ')
       .split(/\s+/)
       .filter(w => w.length > 2);
-
     const stopWords = ['the', 'and', 'for', 'with', 'how', 'what', 'please'];
     return [...new Set(words.filter(w => !stopWords.includes(w)))].slice(0, 10);
   }
@@ -232,29 +109,11 @@ export class KnowledgeManager {
   // 检测分类
   private detectCategory(task: string, commands: string[]): string {
     const text = (task + ' ' + commands.join(' ')).toLowerCase();
-
     if (text.includes('docker') || text.includes('container')) return 'docker';
     if (text.includes('nginx') || text.includes('deploy') || text.includes('pm2')) return 'deployment';
     if (text.includes('firewall') || text.includes('ssl') || text.includes('cert')) return 'security';
     if (text.includes('port') || text.includes('network') || text.includes('ping')) return 'network';
     if (text.includes('disk') || text.includes('memory') || text.includes('cpu')) return 'system';
-
     return 'custom';
-  }
-
-  // Sync to GitHub
-  async syncToGitHub(): Promise<{ success: boolean; message: string }> {
-    if (!this.githubToken || !this.githubRepo) {
-      return { success: false, message: 'GitHub not configured' };
-    }
-
-    try {
-      await execAsync(`cd ${this.repoDir} && git add knowledge/`);
-      await execAsync(`cd ${this.repoDir} && git commit -m "Update knowledge base"`);
-      await execAsync(`cd ${this.repoDir} && git push`);
-      return { success: true, message: 'Synced to GitHub' };
-    } catch (error: any) {
-      return { success: false, message: error.message };
-    }
   }
 }

@@ -44,10 +44,8 @@ const scriptExecutor = new ScriptExecutor(connectionManager, claudeAssistant);
 const sessionManager = new SessionManager(dataDir);
 const marketplaceManager = new MarketplaceManager();
 const knowledgeManager = new KnowledgeManager(
-  process.env.REPO_DIR || '.',
   process.env.GITHUB_TOKEN,
-  process.env.GITHUB_REPO,
-  dataDir
+  process.env.GITHUB_REPO
 );
 
 const serversFile = path.join(dataDir, 'servers.json');
