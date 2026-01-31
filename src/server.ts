@@ -764,11 +764,22 @@ app.post('/api/scripts', async (req, res) => {
       usage_count: 0
     };
 
-    // Only add user_id if valid UUID (also check authorId from frontend)
+    // Only add user_id if valid UUID and user exists in profiles
     const finalUserId = userId || req.body.authorId;
     if (finalUserId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(finalUserId)) {
-      insertData.user_id = finalUserId;
+      // Check if user exists in profiles table
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', finalUserId)
+        .single();
+
+      if (profile) {
+        insertData.user_id = finalUserId;
+      }
     }
+
+    console.log('Creating script with data:', JSON.stringify(insertData, null, 2));
 
     const { data, error } = await supabase
       .from('script_templates')
@@ -778,7 +789,7 @@ app.post('/api/scripts', async (req, res) => {
 
     if (error) {
       console.error('创建脚本失败:', error);
-      throw error;
+      return res.status(500).json({ error: error.message, details: error });
     }
     res.json(data);
   } catch (err: any) {
