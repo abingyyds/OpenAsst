@@ -73,11 +73,22 @@ export class MarketplaceManager {
 
     // 搜索数据库
     try {
+      // 清理查询字符串，移除特殊字符
+      const sanitizedQuery = query
+        .replace(/[\n\r\t]/g, ' ')  // 换行符替换为空格
+        .replace(/[%_\\(),'"]/g, '') // 移除SQL特殊字符
+        .trim()
+        .substring(0, 100); // 限制长度
+
+      if (!sanitizedQuery) {
+        return officialResults;
+      }
+
       let dbQuery = supabase
         .from('script_templates')
         .select('*')
         .eq('is_public', true)
-        .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
+        .or(`name.ilike.%${sanitizedQuery}%,description.ilike.%${sanitizedQuery}%`);
 
       if (category) {
         dbQuery = dbQuery.eq('category', category);
