@@ -1,6 +1,27 @@
+'use client'
+
+import { useState } from 'react'
 import Link from 'next/link'
 
+type Platform = 'unix' | 'powershell' | 'cmd'
+
+const installCommands: Record<Platform, { label: string; command: string }> = {
+  unix: {
+    label: 'macOS/Linux',
+    command: 'curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash'
+  },
+  powershell: {
+    label: 'PowerShell',
+    command: 'iwr -useb https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.ps1 | iex'
+  },
+  cmd: {
+    label: 'CMD',
+    command: 'curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.bat -o install.bat && install.bat'
+  }
+}
+
 export default function Home() {
+  const [platform, setPlatform] = useState<Platform>('unix')
   return (
     <main className="min-h-screen bg-[#0a0f0d] grid-pattern relative overflow-hidden">
       {/* Animated background gradient */}
@@ -80,9 +101,24 @@ export default function Home() {
         {/* CLI Install Command */}
         <div className="mt-16 w-full max-w-2xl">
           <p className="text-green-500/70 text-sm font-mono mb-3 text-center">Quick Install</p>
+          <div className="flex gap-2 mb-3 justify-center">
+            {(Object.keys(installCommands) as Platform[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPlatform(p)}
+                className={`px-3 py-1 text-sm rounded font-mono transition ${
+                  platform === p
+                    ? 'bg-green-600 text-white'
+                    : 'border border-green-900/50 text-green-400 hover:bg-green-900/20'
+                }`}
+              >
+                {installCommands[p].label}
+              </button>
+            ))}
+          </div>
           <div className="code-block p-4 flex items-center justify-between">
             <code className="text-green-400 text-sm overflow-x-auto">
-              curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+              {installCommands[platform].command}
             </code>
           </div>
         </div>
