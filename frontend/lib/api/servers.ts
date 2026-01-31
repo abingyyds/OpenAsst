@@ -28,7 +28,7 @@ export interface Server {
   // Kubernetes 连接配置
   podName?: string
   namespace?: string
-  containerName?: string
+  kubeContainerName?: string
   isRemoteKubernetes?: boolean
 
   // WSL 连接配置
