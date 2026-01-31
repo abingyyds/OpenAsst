@@ -156,7 +156,7 @@ export class AutoExecuteStream {
   }
 
   async execute(serverConfig: ServerConfig, task: string, systemInfo: any, language?: string) {
-    const MAX_ITERATIONS = 20;  // 增加最大迭代次数
+    const MAX_ITERATIONS = 50;  // 增加最大迭代次数
     const executionHistory: any[] = [];
     let currentIteration = 0;
     let taskCompleted = false;

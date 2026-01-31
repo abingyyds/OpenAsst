@@ -33,6 +33,16 @@ const searchService = new SearchService(
   process.env.TAVILY_API_KEY,
   process.env.SERPER_API_KEY
 );
+
+// 启动时显示搜索API配置状态
+console.log('=== Search API Configuration ===');
+console.log('TAVILY_API_KEY configured:', !!process.env.TAVILY_API_KEY);
+console.log('SERPER_API_KEY configured:', !!process.env.SERPER_API_KEY);
+if (process.env.TAVILY_API_KEY) {
+  console.log('TAVILY_API_KEY length:', process.env.TAVILY_API_KEY.length);
+  console.log('TAVILY_API_KEY preview:', process.env.TAVILY_API_KEY.substring(0, 8) + '...');
+}
+
 const claudeAssistant = new ClaudeAssistant(
   process.env.ANTHROPIC_API_KEY || '',
   process.env.ANTHROPIC_BASE_URL || undefined,

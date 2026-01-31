@@ -166,13 +166,16 @@ export class SearchService {
       return [];
     }
 
+    console.log('Tavily: Starting search for:', query);
     try {
       const response = await axios.post('https://api.tavily.com/search', {
         api_key: this.tavilyApiKey,
         query: query,
         search_depth: 'basic',
         max_results: 5
-      });
+      }, { timeout: 10000 });
+
+      console.log('Tavily: Got response, results count:', response.data.results?.length || 0);
 
       return response.data.results.map((result: any) => ({
         source: 'internet' as const,
@@ -181,8 +184,12 @@ export class SearchService {
         relevance: result.score || 1,
         commands: []
       }));
-    } catch (error) {
-      console.error('Tavily search error:', error);
+    } catch (error: any) {
+      console.error('Tavily search error:', error.message || error);
+      if (error.response) {
+        console.error('Tavily response status:', error.response.status);
+        console.error('Tavily response data:', JSON.stringify(error.response.data));
+      }
       return [];
     }
   }
@@ -231,9 +238,18 @@ export class SearchService {
    * 搜索互联网
    */
   async searchInternet(query: string): Promise<SearchResult[]> {
+    console.log('=== Internet Search Debug ===');
+    console.log('Tavily API key configured:', !!this.tavilyApiKey);
+    console.log('Tavily API key valid:', this.isValidApiKey(this.tavilyApiKey));
+    console.log('Serper API key configured:', !!this.serperApiKey);
+    console.log('Serper API key valid:', this.isValidApiKey(this.serperApiKey));
+    console.log('Search query:', query);
+
     if (this.isValidApiKey(this.tavilyApiKey)) {
+      console.log('>>> Calling Tavily API...');
       return await this.searchWithTavily(query);
     } else if (this.isValidApiKey(this.serperApiKey)) {
+      console.log('>>> Calling Serper API...');
       return await this.searchWithSerper(query);
     }
     console.log('No valid internet search API key configured, skipping internet search');
