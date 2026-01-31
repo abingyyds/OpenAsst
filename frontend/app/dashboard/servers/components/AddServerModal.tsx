@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { serverApi, ConnectionType } from '@/lib/api/servers'
+import LocalAgentSetup from '@/components/LocalAgentSetup'
+import { AgentInfo } from '@/lib/localAgent'
 
 interface AddServerModalProps {
   isOpen: boolean
@@ -51,6 +53,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
   const [error, setError] = useState('')
   const [testLoading, setTestLoading] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [localAgentInfo, setLocalAgentInfo] = useState<AgentInfo | null>(null)
 
   if (!isOpen) return null
 
@@ -59,7 +62,11 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
       return 'Please enter connection name'
     }
 
-    if (connectionType === 'ssh') {
+    if (connectionType === 'local') {
+      if (!localAgentInfo) {
+        return 'Please install and start the local agent first'
+      }
+    } else if (connectionType === 'ssh') {
       if (!formData.host.trim()) return 'Please enter host address'
       if (!formData.port || formData.port <= 0) return 'Please enter valid port'
       if (!formData.username.trim()) return 'Please enter username'
@@ -208,8 +215,12 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
           submitData.privateKeyPath = formData.privateKeyPath
         }
       } else if (connectionType === 'local') {
-        // Local connection doesn't need additional config
-        // Local connection doesn't need additional configuration
+        // Local connection with agent info
+        submitData.localOnly = true
+        if (localAgentInfo) {
+          submitData.hostname = localAgentInfo.hostname
+          submitData.platform = localAgentInfo.platform
+        }
       } else if (connectionType === 'docker') {
         submitData.containerName = formData.containerName
         submitData.containerId = formData.containerId
@@ -427,9 +438,7 @@ export default function AddServerModal({ isOpen, onClose, onSuccess }: AddServer
 
           {/* Local Terminal */}
           {connectionType === 'local' && (
-            <div className="bg-green-900/20 border border-green-500/30 p-3 rounded text-sm text-green-400 font-mono">
-              Local terminal executes commands directly on the server.
-            </div>
+            <LocalAgentSetup onConnected={(info) => setLocalAgentInfo(info)} />
           )}
 
           {/* Docker Config */}
