@@ -148,15 +148,169 @@ export class KnowledgeManager {
     return 'custom';
   }
 
-  // 同步到 GitHub (暂时返回成功，后续实现 GitHub API)
-  async syncToGitHub(): Promise<{ success: boolean; message: string }> {
-    // TODO: 使用 GitHub API 同步
-    return { success: true, message: 'Sync scheduled' };
+  // 同步到 GitHub
+  async syncToGitHub(): Promise<{ success: boolean; message: string; synced: number }> {
+    if (!this.githubToken) {
+      return { success: false, message: 'GitHub token not configured', synced: 0 };
+    }
+
+    try {
+      // 获取未同步的知识
+      const { data: unsyncedItems } = await supabase
+        .from('knowledge_items')
+        .select('*')
+        .eq('synced_to_github', false);
+
+      if (!unsyncedItems || unsyncedItems.length === 0) {
+        return { success: true, message: 'No items to sync', synced: 0 };
+      }
+
+      // 按分类分组
+      const byCategory: Record<string, KnowledgeItem[]> = {};
+      for (const item of unsyncedItems) {
+        const cat = item.category || 'custom';
+        if (!byCategory[cat]) byCategory[cat] = [];
+        byCategory[cat].push(item);
+      }
+
+      let totalSynced = 0;
+
+      // 更新每个分类的文件
+      for (const [category, items] of Object.entries(byCategory)) {
+        const synced = await this.updateGitHubFile(category, items);
+        if (synced) totalSynced += items.length;
+      }
+
+      // 更新索引文件
+      await this.updateGitHubIndex();
+
+      return { success: true, message: `Synced ${totalSynced} items`, synced: totalSynced };
+    } catch (error: any) {
+      console.error('GitHub sync failed:', error);
+      return { success: false, message: error.message, synced: 0 };
+    }
   }
 
   // 从市场同步 (暂时返回0，后续实现)
   async syncFromMarketplace(): Promise<number> {
     // TODO: 从 script_templates 同步到 knowledge_items
     return 0;
+  }
+
+  // 更新 GitHub 文件
+  private async updateGitHubFile(category: string, newItems: KnowledgeItem[]): Promise<boolean> {
+    const filePath = `knowledge/${category}.json`;
+    const [owner, repo] = this.githubRepo!.split('/');
+
+    try {
+      // 1. 获取现有文件内容和 SHA
+      let existingItems: any[] = [];
+      let sha: string | undefined;
+
+      try {
+        const getRes = await axios.get(
+          `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
+          { headers: { Authorization: `token ${this.githubToken}` } }
+        );
+        sha = getRes.data.sha;
+        const content = Buffer.from(getRes.data.content, 'base64').toString('utf-8');
+        const parsed = JSON.parse(content);
+        existingItems = parsed.items || [];
+      } catch (e: any) {
+        if (e.response?.status !== 404) throw e;
+      }
+
+      // 2. 合并新旧数据
+      const mergedItems = [...existingItems];
+      for (const item of newItems) {
+        const exists = mergedItems.some(e => e.title === item.title);
+        if (!exists) {
+          mergedItems.push({
+            id: item.id,
+            title: item.title,
+            keywords: item.keywords,
+            solution: item.solution,
+            commands: item.commands
+          });
+        }
+      }
+
+      // 3. 创建文件内容
+      const fileContent = {
+        category,
+        description: `${category} related knowledge`,
+        items: mergedItems
+      };
+
+      // 4. 更新 GitHub
+      const contentBase64 = Buffer.from(JSON.stringify(fileContent, null, 2)).toString('base64');
+      await axios.put(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
+        {
+          message: `Update ${category} knowledge`,
+          content: contentBase64,
+          sha
+        },
+        { headers: { Authorization: `token ${this.githubToken}` } }
+      );
+
+      // 5. 标记为已同步
+      const ids = newItems.map(i => i.id);
+      await supabase
+        .from('knowledge_items')
+        .update({ synced_to_github: true })
+        .in('id', ids);
+
+      return true;
+    } catch (error) {
+      console.error(`Failed to update ${category}:`, error);
+      return false;
+    }
+  }
+
+  // 更新 GitHub 索引文件
+  private async updateGitHubIndex(): Promise<void> {
+    const filePath = 'knowledge/index.json';
+    const [owner, repo] = this.githubRepo!.split('/');
+
+    try {
+      // 获取所有分类
+      const { data } = await supabase
+        .from('knowledge_items')
+        .select('category');
+
+      const categories = [...new Set((data || []).map(d => d.category))];
+      const files = categories.map(c => `${c}.json`);
+
+      // 获取现有 SHA
+      let sha: string | undefined;
+      try {
+        const getRes = await axios.get(
+          `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
+          { headers: { Authorization: `token ${this.githubToken}` } }
+        );
+        sha = getRes.data.sha;
+      } catch (e: any) {
+        if (e.response?.status !== 404) throw e;
+      }
+
+      // 创建索引内容
+      const indexContent = {
+        version: '1.0.0',
+        lastUpdated: new Date().toISOString(),
+        categories: categories.map(c => ({ id: c, name: c, description: `${c} knowledge` })),
+        files
+      };
+
+      // 更新 GitHub
+      const contentBase64 = Buffer.from(JSON.stringify(indexContent, null, 2)).toString('base64');
+      await axios.put(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
+        { message: 'Update knowledge index', content: contentBase64, sha },
+        { headers: { Authorization: `token ${this.githubToken}` } }
+      );
+    } catch (error) {
+      console.error('Failed to update index:', error);
+    }
   }
 }
