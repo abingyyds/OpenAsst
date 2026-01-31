@@ -10,6 +10,7 @@ import { MarketplaceManager } from './marketplace-manager';
 import { SearchService } from './search-service';
 import { KnowledgeManager } from './knowledge-manager';
 import { ServerConfig, CommandScript, Like, Statistics, Favorite, Rating } from './types';
+import { supabase } from './supabase';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -813,76 +814,89 @@ app.post('/api/models/test', async (req, res) => {
   }
 });
 
-app.get('/api/scripts', (req, res) => {
-  let scripts = loadScripts();
+app.get('/api/scripts', async (req, res) => {
+  try {
+    let query = supabase.from('script_templates').select('*');
 
-  // Apply category filter
-  const category = req.query.category as string;
-  if (category && category !== 'all') {
-    scripts = scripts.filter(s => s.category === category);
+    // Apply category filter
+    const category = req.query.category as string;
+    if (category && category !== 'all') {
+      query = query.eq('category', category);
+    }
+
+    // Apply sorting
+    const sort = req.query.sort as string;
+    if (sort === 'likes') {
+      query = query.order('like_count', { ascending: false });
+    } else if (sort === 'usage') {
+      query = query.order('usage_count', { ascending: false });
+    } else {
+      query = query.order('created_at', { ascending: false });
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    res.json(data || []);
+  } catch (err) {
+    console.error('获取脚本失败:', err);
+    res.json([]);
   }
+});
 
-  // Apply sorting
-  const sort = req.query.sort as string;
-  if (sort) {
-    scripts = sortScripts(scripts, sort);
+app.get('/api/scripts/popular', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 5;
+    const { data, error } = await supabase
+      .from('script_templates')
+      .select('*')
+      .order('like_count', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error('获取热门脚本失败:', err);
+    res.json([]);
   }
-
-  res.json(scripts);
 });
 
-app.get('/api/scripts/popular', (req, res) => {
-  const limit = parseInt(req.query.limit as string) || 5;
-  const scripts = loadScripts();
-  const sorted = sortScripts(scripts, 'likes');
-  res.json(sorted.slice(0, limit));
+app.post('/api/scripts', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('script_templates')
+      .insert({
+        name: req.body.name,
+        description: req.body.description,
+        category: req.body.category || 'custom',
+        tags: req.body.tags || [],
+        commands: req.body.commands || [],
+        author: req.body.author,
+        user_id: req.body.userId,
+        is_public: req.body.isPublic ?? true,
+        like_count: 0,
+        usage_count: 0
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error('创建脚本失败:', err);
+    res.status(500).json({ error: '创建脚本失败' });
+  }
 });
 
-app.post('/api/scripts', (req, res) => {
-  const scripts = loadScripts();
-  const newScript: CommandScript = {
-    id: Date.now().toString(),
-    ...req.body,
-    usageCount: 0,
-    likeCount: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  scripts.push(newScript);
-  saveScripts(scripts);
-
-  // Update statistics
-  updateStatistics({ totalScripts: scripts.length });
-
-  // Auto sync to knowledge base
-  knowledgeManager.syncFromMarketplace();
-
-  res.json(newScript);
-});
-
-app.delete('/api/scripts/:id', (req, res) => {
+app.delete('/api/scripts/:id', async (req, res) => {
   try {
     const scriptId = req.params.id;
-    const userId = req.headers['x-user-id'] as string;
+    const { error } = await supabase
+      .from('script_templates')
+      .delete()
+      .eq('id', scriptId);
 
-    const scripts = loadScripts();
-    const script = scripts.find(s => s.id === scriptId);
-
-    if (!script) {
-      return res.status(404).json({ error: 'Script not found' });
-    }
-
-    // Check if user is the author (allow deletion if no author or user matches)
-    if (script.authorId && userId && script.authorId !== userId) {
-      return res.status(403).json({ error: 'You can only delete your own scripts' });
-    }
-
-    const filtered = scripts.filter(s => s.id !== scriptId);
-    saveScripts(filtered);
-
-    // Update statistics
-    updateStatistics({ totalScripts: filtered.length });
-
+    if (error) throw error;
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
@@ -890,59 +904,79 @@ app.delete('/api/scripts/:id', (req, res) => {
 });
 
 // Like endpoints
-app.post('/api/scripts/:id/like', (req, res) => {
+app.post('/api/scripts/:id/like', async (req, res) => {
   try {
     const scriptId = req.params.id;
-    const userId = req.headers['x-user-id'] as string;
+    const visitorId = req.headers['x-user-id'] as string || `visitor_${Date.now()}`;
 
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
+    // 检查是否已点赞
+    const { data: existing } = await supabase
+      .from('script_likes')
+      .select('id')
+      .eq('script_id', scriptId)
+      .eq('user_id', visitorId)
+      .single();
 
-    if (hasUserLiked(scriptId, userId)) {
+    if (existing) {
       return res.status(400).json({ error: 'Already liked' });
     }
 
-    addLike(scriptId, userId);
-    const scripts = loadScripts();
-    const script = scripts.find(s => s.id === scriptId);
+    // 添加点赞
+    await supabase.from('script_likes').insert({ script_id: scriptId, user_id: visitorId });
 
-    res.json({ success: true, likeCount: script?.likeCount || 0 });
+    // 更新点赞数
+    await supabase.rpc('increment_like_count', { script_id: scriptId });
+
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
-app.delete('/api/scripts/:id/like', (req, res) => {
+app.delete('/api/scripts/:id/like', async (req, res) => {
   try {
     const scriptId = req.params.id;
-    const userId = req.headers['x-user-id'] as string;
+    const visitorId = req.headers['x-user-id'] as string;
 
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
+    await supabase
+      .from('script_likes')
+      .delete()
+      .eq('script_id', scriptId)
+      .eq('user_id', visitorId);
+
+    await supabase.rpc('decrement_like_count', { script_id: scriptId });
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get('/api/scripts/:id/likes', async (req, res) => {
+  try {
+    const scriptId = req.params.id;
+    const visitorId = req.headers['x-user-id'] as string;
+
+    // 获取点赞数
+    const { data: script } = await supabase
+      .from('script_templates')
+      .select('like_count')
+      .eq('id', scriptId)
+      .single();
+
+    // 检查用户是否已点赞
+    let userHasLiked = false;
+    if (visitorId) {
+      const { data } = await supabase
+        .from('script_likes')
+        .select('id')
+        .eq('script_id', scriptId)
+        .eq('user_id', visitorId)
+        .single();
+      userHasLiked = !!data;
     }
 
-    removeLike(scriptId, userId);
-    const scripts = loadScripts();
-    const script = scripts.find(s => s.id === scriptId);
-
-    res.json({ success: true, likeCount: script?.likeCount || 0 });
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
-  }
-});
-
-app.get('/api/scripts/:id/likes', (req, res) => {
-  try {
-    const scriptId = req.params.id;
-    const userId = req.headers['x-user-id'] as string;
-
-    const scripts = loadScripts();
-    const script = scripts.find(s => s.id === scriptId);
-    const likeCount = script?.likeCount || 0;
-    const userHasLiked = userId ? hasUserLiked(scriptId, userId) : false;
-
-    res.json({ likeCount, userHasLiked });
+    res.json({ likeCount: script?.like_count || 0, userHasLiked });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
