@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * OpenAsst Local Agent
- * 轻量级本地代理，让浏览器连接本地终端
+ * Lightweight local agent that connects browser to local terminal
  */
 
 const http = require('http');
@@ -11,7 +11,7 @@ const os = require('os');
 const PORT = process.env.OPENASST_PORT || 3003;
 const VERSION = '1.0.0';
 
-// 简单的 WebSocket 实现
+// Simple WebSocket implementation
 function createWebSocketServer(server) {
   server.on('upgrade', (req, socket) => {
     if (req.headers['upgrade'] !== 'websocket') {
@@ -33,7 +33,7 @@ function createWebSocketServer(server) {
       '\r\n'
     );
 
-    console.log('[Agent] WebSocket 连接已建立');
+    console.log('[Agent] WebSocket connection established');
     handleWebSocket(socket);
   });
 }
@@ -47,16 +47,16 @@ function handleWebSocket(socket) {
       const data = JSON.parse(message);
       handleMessage(data, socket);
     } catch (e) {
-      console.error('[Agent] 解析消息失败:', e.message);
+      console.error('[Agent] Failed to parse message:', e.message);
     }
   });
 
   socket.on('close', () => {
-    console.log('[Agent] WebSocket 连接已关闭');
+    console.log('[Agent] WebSocket connection closed');
   });
 
   socket.on('error', (err) => {
-    console.error('[Agent] Socket 错误:', err.message);
+    console.error('[Agent] Socket error:', err.message);
   });
 }
 
@@ -122,7 +122,7 @@ function sendMessage(socket, data) {
     const frame = encodeWebSocketFrame(JSON.stringify(data));
     socket.write(frame);
   } catch (e) {
-    console.error('[Agent] 发送消息失败:', e.message);
+    console.error('[Agent] Failed to send message:', e.message);
   }
 }
 
@@ -157,7 +157,7 @@ function handleMessage(data, socket) {
 }
 
 function executeCommand(command, id, socket) {
-  console.log(`[Agent] 执行命令: ${command}`);
+  console.log(`[Agent] Executing command: ${command}`);
 
   const isWindows = os.platform() === 'win32';
   const shell = isWindows ? 'cmd.exe' : '/bin/bash';
@@ -190,7 +190,7 @@ function executeCommand(command, id, socket) {
   });
 }
 
-// HTTP 服务器处理 CORS 和健康检查
+// HTTP server handles CORS and health check
 const server = http.createServer((req, res) => {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -231,12 +231,12 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log('  ╔═══════════════════════════════════════╗');
   console.log('  ║     OpenAsst Local Agent v' + VERSION + '      ║');
   console.log('  ╠═══════════════════════════════════════╣');
-  console.log(`  ║  状态: 运行中                         ║`);
-  console.log(`  ║  端口: ${PORT}                            ║`);
-  console.log(`  ║  地址: http://127.0.0.1:${PORT}          ║`);
+  console.log(`  ║  Status: Running                      ║`);
+  console.log(`  ║  Port:   ${PORT}                            ║`);
+  console.log(`  ║  URL:    http://127.0.0.1:${PORT}          ║`);
   console.log('  ╚═══════════════════════════════════════╝');
   console.log('');
-  console.log('  浏览器现在可以连接到本地终端了！');
-  console.log('  按 Ctrl+C 停止代理');
+  console.log('  Browser can now connect to local terminal!');
+  console.log('  Press Ctrl+C to stop the agent');
   console.log('');
 });

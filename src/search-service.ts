@@ -32,6 +32,21 @@ export class SearchService {
   }
 
   /**
+   * 提取搜索关键词
+   */
+  private extractKeywords(query: string): string[] {
+    let cleaned = query
+      .replace(/^Execute script:\s*/i, '')
+      .replace(/^执行脚本:\s*/i, '')
+      .replace(/安装教程|安装指南|installation guide|tutorial/gi, '')
+      .replace(/安装|install|部署|deploy|配置|setup/gi, '')
+      .trim();
+
+    const words = cleaned.split(/[\s,，、]+/).filter(w => w.length > 0);
+    return [...new Set(words.map(w => w.toLowerCase()))];
+  }
+
+  /**
    * 搜索命令市场
    */
   async searchMarketplace(query: string): Promise<SearchResult[]> {
@@ -42,29 +57,27 @@ export class SearchService {
 
     const scripts: CommandScript[] = JSON.parse(fs.readFileSync(scriptsFile, 'utf-8'));
     const queryLower = query.toLowerCase();
+    const keywords = this.extractKeywords(query);
     const results: SearchResult[] = [];
 
     for (const script of scripts) {
       let relevance = 0;
+      const nameLower = script.name.toLowerCase();
+      const descLower = script.description.toLowerCase();
+      const docLower = (script.documentContent || '').toLowerCase();
 
-      // 检查名称匹配
-      if (script.name.toLowerCase().includes(queryLower)) {
-        relevance += 3;
-      }
+      // 直接查询匹配
+      if (nameLower.includes(queryLower)) relevance += 5;
+      if (descLower.includes(queryLower)) relevance += 3;
+      if (docLower.includes(queryLower)) relevance += 2;
 
-      // 检查描述匹配
-      if (script.description.toLowerCase().includes(queryLower)) {
-        relevance += 2;
-      }
-
-      // 检查标签匹配
-      if (script.tags?.some(tag => tag.toLowerCase().includes(queryLower))) {
-        relevance += 2;
-      }
-
-      // 检查文档内容匹配
-      if (script.documentContent?.toLowerCase().includes(queryLower)) {
-        relevance += 1;
+      // 关键词匹配
+      for (const keyword of keywords) {
+        if (nameLower === keyword) relevance += 10;
+        else if (nameLower.includes(keyword)) relevance += 4;
+        if (script.tags?.some(tag => tag.toLowerCase().includes(keyword))) relevance += 3;
+        if (descLower.includes(keyword)) relevance += 2;
+        if (docLower.includes(keyword)) relevance += 2;
       }
 
       if (relevance > 0) {
@@ -92,24 +105,26 @@ export class SearchService {
 
     const knowledgeBase: KnowledgeBaseItem[] = JSON.parse(fs.readFileSync(kbFile, 'utf-8'));
     const queryLower = query.toLowerCase();
+    const keywords = this.extractKeywords(query);
     const results: SearchResult[] = [];
 
     for (const item of knowledgeBase) {
       let relevance = 0;
+      const titleLower = item.title.toLowerCase();
+      const solutionLower = item.solution.toLowerCase();
 
-      // 检查标题匹配
-      if (item.title.toLowerCase().includes(queryLower)) {
-        relevance += 3;
-      }
+      // 直接查询匹配
+      if (titleLower.includes(queryLower)) relevance += 5;
+      if (solutionLower.includes(queryLower)) relevance += 2;
 
-      // 检查关键词匹配
-      if (item.keywords.some(keyword => keyword.toLowerCase().includes(queryLower))) {
-        relevance += 2;
-      }
-
-      // 检查解决方案内容匹配
-      if (item.solution.toLowerCase().includes(queryLower)) {
-        relevance += 1;
+      // 关键词匹配
+      for (const keyword of keywords) {
+        if (titleLower === keyword) relevance += 10;
+        else if (titleLower.includes(keyword)) relevance += 4;
+        if (item.keywords.some(k => k.toLowerCase().includes(keyword) || keyword.includes(k.toLowerCase()))) {
+          relevance += 3;
+        }
+        if (solutionLower.includes(keyword)) relevance += 2;
       }
 
       if (relevance > 0) {
@@ -239,11 +254,9 @@ export class SearchService {
     const kbResults = await this.searchKnowledgeBase(query);
     allResults.push(...kbResults);
 
-    // 3. 如果前两个来源结果不足，搜索互联网
-    if (allResults.length < 3) {
-      const internetResults = await this.searchInternet(query);
-      allResults.push(...internetResults);
-    }
+    // 3. 始终尝试搜索互联网（如果有有效的API key）
+    const internetResults = await this.searchInternet(query);
+    allResults.push(...internetResults);
 
     return allResults.sort((a, b) => b.relevance - a.relevance);
   }

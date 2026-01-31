@@ -731,15 +731,29 @@ app.get('/api/scripts', async (req, res) => {
 // Search scripts by keyword (must be before :id route)
 app.get('/api/scripts/search', async (req, res) => {
   try {
-    const keyword = (req.query.q as string || '').toLowerCase();
-    if (!keyword) {
+    const query = (req.query.q as string || '').toLowerCase();
+    if (!query) {
       return res.json([]);
     }
+
+    // Extract keywords: split by spaces and extract English words
+    const words = query.split(/\s+/);
+    const englishWords = query.match(/[a-zA-Z]+/g) || [];
+    const allKeywords = [...new Set([...words, ...englishWords])].filter(k => k.length >= 2);
+
+    if (allKeywords.length === 0) {
+      return res.json([]);
+    }
+
+    // Build OR conditions for all keywords
+    const conditions = allKeywords.map(k =>
+      `name.ilike.%${k}%,description.ilike.%${k}%,document_content.ilike.%${k}%`
+    ).join(',');
 
     const { data, error } = await supabase
       .from('script_templates')
       .select('*')
-      .or(`name.ilike.%${keyword}%,description.ilike.%${keyword}%`)
+      .or(conditions)
       .limit(10);
 
     if (error) throw error;
@@ -1509,7 +1523,7 @@ app.post('/api/sessions/:serverId/auto-execute/stream', async (req, res) => {
     const systemInfo = await executor.execute('uname -a && cat /etc/os-release 2>/dev/null || echo "OS info not available"');
 
     // 创建流式执行器并执行
-    const streamExecutor = new AutoExecuteStream(connectionManager, assistant, res, marketplaceManager, searchService);
+    const streamExecutor = new AutoExecuteStream(connectionManager, assistant, res, marketplaceManager, searchService, sessionManager);
     await streamExecutor.execute(server, task, systemInfo, language);
 
   } catch (error) {

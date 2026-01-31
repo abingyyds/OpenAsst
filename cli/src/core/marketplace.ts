@@ -6,7 +6,7 @@ import { CommandScript } from '../types';
 
 const DATA_DIR = path.join(os.homedir(), '.openasst-cli');
 const SCRIPTS_FILE = path.join(DATA_DIR, 'scripts.json');
-const DEFAULT_API_URL = 'http://localhost:3002';
+const DEFAULT_API_URL = 'https://openclaw.ai';
 
 export class Marketplace {
   private scripts: CommandScript[] = [];
@@ -169,8 +169,8 @@ export class Marketplace {
           commands: script.commands || [],
           category: script.category || 'custom',
           tags: script.tags || [],
-          documentContent: script.documentContent,
-          documentType: script.documentType
+          documentContent: script.document_content || script.documentContent,
+          documentType: script.document_type || script.documentType
         }));
       }
       return [];

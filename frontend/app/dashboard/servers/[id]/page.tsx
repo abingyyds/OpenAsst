@@ -765,6 +765,29 @@ export default function ServerDetailPage() {
     } finally {
       setAutoExecuting(false)
       abortControllerRef.current = null
+
+      // 将执行历史转换为聊天消息，这样后续用户问题会显示在执行历史之后
+      setAiMessages(currentAiMessages => {
+        if (currentAiMessages.length > 0) {
+          // 创建执行摘要作为聊天消息
+          const executionSummary = currentAiMessages
+            .filter(msg => msg.includes('💭') || msg.includes('✓') || msg.includes('✅') || msg.includes('❌'))
+            .slice(-5)  // 只保留最后5条重要消息
+            .join('\n')
+
+          if (executionSummary) {
+            setChatMessages(prev => [...prev, {
+              id: Date.now().toString(),
+              server_id: id,
+              user_id: '',
+              role: 'assistant' as const,
+              content: `[执行完成]\n${executionSummary}`,
+              created_at: new Date().toISOString()
+            }])
+          }
+        }
+        return []  // 清空aiMessages
+      })
     }
   }
 

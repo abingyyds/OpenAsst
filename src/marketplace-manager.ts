@@ -57,38 +57,102 @@ export class MarketplaceManager {
     }
   }
 
+  // 提取搜索关键词
+  private extractKeywords(query: string): string[] {
+    // 移除常见前缀和后缀
+    let cleaned = query
+      .replace(/^Execute script:\s*/i, '')
+      .replace(/^执行脚本:\s*/i, '')
+      .replace(/安装教程|安装指南|installation guide|tutorial/gi, '')
+      .replace(/安装|install|部署|deploy|配置|setup/gi, '')
+      .trim();
+
+    // 分词
+    const words = cleaned.split(/[\s,，、]+/).filter(w => w.length > 0);
+
+    // 去重并返回
+    return [...new Set(words.map(w => w.toLowerCase()))];
+  }
+
+  // 计算匹配分数
+  private calculateMatchScore(template: ScriptTemplate, keywords: string[]): number {
+    let score = 0;
+    const name = template.name.toLowerCase();
+    const desc = template.description.toLowerCase();
+    const docContent = ((template as any).documentContent || '').toLowerCase();
+    const tags = template.tags.map(t => t.toLowerCase());
+
+    for (const keyword of keywords) {
+      // 名称完全匹配 +10
+      if (name === keyword) score += 10;
+      // 名称包含关键词 +5
+      else if (name.includes(keyword)) score += 5;
+
+      // 标签匹配 +4
+      if (tags.some(tag => tag.includes(keyword) || keyword.includes(tag))) score += 4;
+
+      // 描述匹配 +2
+      if (desc.includes(keyword)) score += 2;
+
+      // 文档内容匹配 +3
+      if (docContent.includes(keyword)) score += 3;
+    }
+
+    return score;
+  }
+
   // 搜索模板
   async searchTemplates(query: string, category?: string): Promise<ScriptTemplate[]> {
+    const keywords = this.extractKeywords(query);
     const lowerQuery = query.toLowerCase();
 
     // 搜索官方模板
-    const officialResults = Array.from(this.officialTemplatesMap.values()).filter(template => {
-      const matchesQuery =
+    const officialResults: Array<{ template: ScriptTemplate; score: number }> = [];
+    for (const template of this.officialTemplatesMap.values()) {
+      if (!template.isPublic) continue;
+      if (category && template.category !== category) continue;
+
+      const score = this.calculateMatchScore(template, keywords);
+      // 也检查原始查询
+      const directMatch =
         template.name.toLowerCase().includes(lowerQuery) ||
         template.description.toLowerCase().includes(lowerQuery) ||
         template.tags.some(tag => tag.toLowerCase().includes(lowerQuery));
-      const matchesCategory = !category || template.category === category;
-      return matchesQuery && matchesCategory && template.isPublic;
-    });
+
+      if (score > 0 || directMatch) {
+        officialResults.push({ template, score: directMatch ? score + 5 : score });
+      }
+    }
 
     // 搜索数据库
     try {
       // 清理查询字符串，移除特殊字符
       const sanitizedQuery = query
-        .replace(/[\n\r\t]/g, ' ')  // 换行符替换为空格
-        .replace(/[%_\\(),'"]/g, '') // 移除SQL特殊字符
+        .replace(/[\n\r\t]/g, ' ')
+        .replace(/[%_\\(),'"]/g, '')
         .trim()
-        .substring(0, 100); // 限制长度
+        .substring(0, 100);
 
-      if (!sanitizedQuery) {
-        return officialResults;
+      if (!sanitizedQuery && keywords.length === 0) {
+        return officialResults.sort((a, b) => b.score - a.score).map(r => r.template);
       }
+
+      // 构建多个搜索条件
+      const searchTerms = [sanitizedQuery, ...keywords].filter(t => t.length > 0);
+      const orConditions = searchTerms.flatMap(term => [
+        `name.ilike.%${term}%`,
+        `description.ilike.%${term}%`,
+        `document_content.ilike.%${term}%`
+      ]).join(',');
 
       let dbQuery = supabase
         .from('script_templates')
         .select('*')
-        .eq('is_public', true)
-        .or(`name.ilike.%${sanitizedQuery}%,description.ilike.%${sanitizedQuery}%`);
+        .eq('is_public', true);
+
+      if (orConditions) {
+        dbQuery = dbQuery.or(orConditions);
+      }
 
       if (category) {
         dbQuery = dbQuery.eq('category', category);
@@ -98,13 +162,23 @@ export class MarketplaceManager {
 
       if (error) {
         console.error('搜索脚本失败:', error);
-        return officialResults;
+        return officialResults.sort((a, b) => b.score - a.score).map(r => r.template);
       }
 
-      const dbResults = (data || []).map(this.mapDbToTemplate);
-      return [...officialResults, ...dbResults];
+      // 计算数据库结果的分数
+      const dbResults: Array<{ template: ScriptTemplate; score: number }> = [];
+      for (const item of data || []) {
+        const template = this.mapDbToTemplate(item);
+        (template as any).documentContent = item.document_content;
+        const score = this.calculateMatchScore(template, keywords);
+        dbResults.push({ template, score });
+      }
+
+      // 合并并排序
+      const allResults = [...officialResults, ...dbResults];
+      return allResults.sort((a, b) => b.score - a.score).map(r => r.template);
     } catch {
-      return officialResults;
+      return officialResults.sort((a, b) => b.score - a.score).map(r => r.template);
     }
   }
 
@@ -239,7 +313,7 @@ export class MarketplaceManager {
 
   // 数据库记录转换为 ScriptTemplate
   private mapDbToTemplate(data: any): ScriptTemplate {
-    return {
+    const template: any = {
       id: data.id,
       name: data.name,
       description: data.description || '',
@@ -255,5 +329,10 @@ export class MarketplaceManager {
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at)
     };
+    // 添加文档内容
+    if (data.document_content) {
+      template.documentContent = data.document_content;
+    }
+    return template as ScriptTemplate;
   }
 }

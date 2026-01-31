@@ -3,19 +3,24 @@ import { ConnectionManager } from './connection-manager';
 import { ClaudeAssistant } from './claude-assistant';
 import { MarketplaceManager } from './marketplace-manager';
 import { SearchService } from './search-service';
+import { SessionManager } from './session-manager';
 import { ServerConfig } from './types';
 import axios from 'axios';
 
 const KNOWLEDGE_BASE_URL = 'https://raw.githubusercontent.com/abingyyds/OpenAsst/main/knowledge';
 
 export class AutoExecuteStream {
+  private sessionManager?: SessionManager;
+
   constructor(
     private connectionManager: ConnectionManager,
     private assistant: ClaudeAssistant,
     private res: Response,
     private marketplaceManager: MarketplaceManager,
-    private searchService?: SearchService
+    private searchService?: SearchService,
+    sessionManager?: SessionManager
   ) {
+    this.sessionManager = sessionManager;
     // 设置SSE响应头
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -225,8 +230,8 @@ export class AutoExecuteStream {
             this.sendEvent('status', { message: `Found ${knowledgeBaseResults.length} knowledge entries` });
           }
 
-          // 3. 如果本地没找到，搜索互联网
-          if (relatedScripts.length === 0 && knowledgeBaseResults.length === 0 && this.searchService) {
+          // 3. 始终尝试搜索互联网（如果有有效的API key）
+          if (this.searchService) {
             this.sendEvent('status', { message: 'Searching internet...' });
             try {
               internetSearchResults = await this.searchService.searchInternet(task);
@@ -392,6 +397,34 @@ export class AutoExecuteStream {
       }
 
       // 发送最终总结
+      // 保存执行历史到会话，让AI能记住发生了什么
+      if (this.sessionManager) {
+        // 生成执行摘要
+        const executionSummary = executionHistory.map((h, i) => {
+          const cmds = h.commands?.join('; ') || '无';
+          const result = h.summary?.substring(0, 200) || '无';
+          return `第${i + 1}轮: ${cmds} -> ${result}`;
+        }).join('\n');
+
+        // 添加系统消息记录执行过程
+        this.sessionManager.addMessage(serverConfig.id, {
+          role: 'assistant',
+          content: `[自动执行任务: ${task}]\n\n执行了 ${currentIteration} 轮操作:\n${executionSummary}\n\n结果: ${taskCompleted ? '成功' : '未完成'}`
+        });
+
+        // 保存命令日志
+        for (const history of executionHistory) {
+          for (const log of history.commandLogs || []) {
+            this.sessionManager.addCommandLog(serverConfig.id, {
+              timestamp: new Date(),
+              command: log.command,
+              output: log.output?.substring(0, 500) || '',
+              exitCode: log.exitCode || 0
+            });
+          }
+        }
+      }
+
       this.sendEvent('done', {
         success: taskCompleted,
         iterations: currentIteration,
