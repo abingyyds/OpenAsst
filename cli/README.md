@@ -1,6 +1,18 @@
-# OpenAsst CLI
+# OpenAsst
 
-OpenAsst CLI is an AI-powered terminal assistant that helps you accomplish system tasks using natural language.
+<p align="center">
+  <b>AI-powered terminal assistant for natural language system operations</b>
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#features">Features</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#api-sharing">API Sharing</a> •
+  <a href="#skills">Skills</a>
+</p>
+
+---
 
 ## Quick Start
 
@@ -10,19 +22,36 @@ OpenAsst CLI is an AI-powered terminal assistant that helps you accomplish syste
 curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
 ```
 
+**Then configure:**
+
+```bash
+openasst config
+```
+
+**Start using:**
+
+```bash
+openasst do "install docker and start it"
+```
+
+---
+
 ## Features
 
-- **Smart Task Engine** - Execute any task using natural language, AI automatically plans and executes commands
-- **Auto Error Recovery** - Intelligent error detection and automatic fixing
-- **Security Guard** - Built-in security checks to prevent dangerous operations
-- **API Sharing** - Share your AI API with other tools (Claude Code, Cursor, etc.)
-- **Skill System** - Install and manage skills to extend functionality
-- **Scheduled Tasks** - Create timers and scheduled automation
-- **Project Deployment** - Auto-deploy from documentation URLs or Git repositories
-- **Service Management** - Manage background services with ease
-- **Project Monitoring** - Monitor services with auto-restart capability
-- **Script Marketplace** - Pre-defined command scripts library
-- **Cross-platform** - Supports Windows, macOS, and Linux
+| Feature | Description |
+|---------|-------------|
+| 🤖 **Smart Task Engine** | Execute any task using natural language |
+| 🔧 **Auto Error Recovery** | Intelligent error detection and auto-fixing |
+| 🔒 **Security Guard** | Built-in protection against dangerous commands |
+| 🔗 **API Sharing** | Share AI API with Claude Code, Cursor, Aider, etc. |
+| 🧩 **Skill System** | Extensible skills for Git, Docker, System ops |
+| ⏰ **Scheduled Tasks** | Create timers and automated jobs |
+| 🚀 **Auto Deployment** | Deploy from Git repos or documentation |
+| 📊 **Service Management** | Manage background services |
+| 👁️ **Monitoring** | Monitor services with auto-restart |
+| 🌍 **Cross-platform** | macOS, Linux, Windows |
+
+---
 
 ## Installation
 
@@ -42,89 +71,59 @@ npm run build
 npm link
 ```
 
-## Configuration
+---
 
-Configure your API key before first use:
+## Configuration
 
 ```bash
 openasst config
 ```
 
-Or manually create the config file:
+Or manually:
 
 ```bash
 mkdir -p ~/.openasst-cli
 cat > ~/.openasst-cli/config.json << EOF
 {
-  "apiKey": "your-api-key",
+  "apiKey": "your-anthropic-api-key",
   "baseUrl": "https://api.anthropic.com",
   "model": "claude-3-5-sonnet-20241022"
 }
 EOF
 ```
 
+---
+
 ## Usage
 
-### Smart Task Engine (Recommended)
+### Smart Task Engine
 
 Execute any task using natural language:
 
 ```bash
-# Basic usage
-openasst do "show system information"
-openasst do "find files larger than 100MB"
-openasst do "install nginx and start it"
+# Install software
+openasst do "install nginx and configure it for port 8080"
 
-# Auto-confirm all actions
-openasst do "update all packages" -y
+# System operations
+openasst do "check disk usage and clean up if over 80%"
 
-# Specify working directory
-openasst do "build the project" -d /path/to/project
+# Development tasks
+openasst do "create a new React project with TypeScript"
+
+# Auto-confirm mode
+openasst do "update all npm packages" -y
+
+# Verbose output
+openasst do "deploy my app to production" -v
 ```
 
 ### Interactive Assistant
-
-Enter interactive mode for continuous task execution:
 
 ```bash
 openasst assistant
 ```
 
-### AI Task Execution
-
-Legacy AI command for task execution:
-
-```bash
-openasst ai "check disk usage and clean up old logs"
-```
-
-### Project Analysis
-
-Analyze project structure and detect type:
-
-```bash
-openasst analyze .
-openasst analyze /path/to/project
-```
-
-### Auto Deployment
-
-Deploy projects automatically from Git or local directory:
-
-```bash
-# From Git repository
-openasst auto https://github.com/user/repo.git
-
-# From local directory
-openasst auto . -d /var/www/myapp
-
-# Specify branch
-openasst auto https://github.com/user/repo.git -b develop
-```
-
 ### Deploy from Documentation
-
-Deploy following instructions from a documentation URL:
 
 ```bash
 # From URL
@@ -133,32 +132,104 @@ openasst deploy https://example.com/install-guide.md
 # From local file
 openasst deploy ./INSTALL.md
 
-# Dry run (preview only)
-openasst deploy https://example.com/guide.md --dry-run
+# With options
+openasst deploy https://docs.example.com/setup --dry-run
 ```
 
-### Quick Deploy with Templates
-
-Use pre-defined deployment templates:
+### Auto Deploy from Git
 
 ```bash
-# List available templates
-openasst templates
-
-# Deploy using template
-openasst quick nodejs
-openasst quick docker
-openasst quick nginx
+openasst auto https://github.com/user/repo.git
+openasst auto https://github.com/user/repo.git -b develop
 ```
 
-### Service Management
+---
+
+## API Sharing
+
+Share your AI API with other tools:
+
+```bash
+# List supported tools
+openasst api tools
+
+# Share with Claude Code
+openasst api share claude-code
+
+# Share with Cursor
+openasst api share cursor
+
+# Share with all tools
+openasst api share
+
+# Export as environment variables
+openasst api export
+```
+
+**Supported Tools:**
+- Claude Code
+- Cursor
+- Continue
+- Aider
+- Shell environment variables
+
+---
+
+## Skills
+
+Extensible skill system for specialized operations:
+
+```bash
+# List installed skills
+openasst skill list
+
+# Install built-in skills
+openasst skill init
+
+# Run a skill command
+openasst skill run git-ops status
+openasst skill run docker-ops ps
+openasst skill run system-ops info
+
+# Remove a skill
+openasst skill remove <skill-id>
+```
+
+**Built-in Skills:**
+- `git-ops` - Git operations (status, commit, push, pull)
+- `docker-ops` - Docker management (ps, up, down, logs)
+- `system-ops` - System utilities (info, disk, memory, processes)
+
+---
+
+## Scheduled Tasks
+
+Create automated jobs with cron scheduling:
+
+```bash
+# List scheduled tasks
+openasst schedule list
+
+# Add a new task
+openasst schedule add
+
+# Remove a task
+openasst schedule remove <task-id>
+
+# Enable/disable a task
+openasst schedule toggle <task-id> --enable
+openasst schedule toggle <task-id> --disable
+```
+
+---
+
+## Service Management
 
 Manage background services:
 
 ```bash
 # Start a service
-openasst service start myapp "node server.js"
-openasst service start myapp "python app.py" -d /path/to/app
+openasst service start myapp "npm start" -d /path/to/app
 
 # Stop a service
 openasst service stop myapp
@@ -169,12 +240,13 @@ openasst service restart myapp
 # List all services
 openasst service list
 
-# View service logs
-openasst service logs myapp
+# View logs
 openasst service logs myapp -n 100
 ```
 
-### Project Monitoring
+---
+
+## Monitoring
 
 Monitor services with auto-restart:
 
@@ -185,177 +257,49 @@ openasst monitor start
 # Create new monitor config
 openasst monitor start --new
 
-# View monitor status
+# Check status
 openasst monitor status
 ```
 
-### Script Marketplace
+---
 
-Browse and run pre-defined scripts:
+## Security
 
-```bash
-# List all scripts
-openasst market list
+OpenAsst includes built-in security protection:
 
-# Search scripts
-openasst market search disk
-
-# Run a script
-openasst market run sys-info
-openasst market run disk-usage
-openasst market run network-info
-```
-
-### Interactive Chat Mode
-
-Real-time deployment and configuration:
-
-```bash
-openasst chat
-openasst chat -d /path/to/project
-```
-
-## Available Templates
-
-| Template | Description |
-|----------|-------------|
-| `nodejs` | Node.js project deployment |
-| `python` | Python project (Flask/Django/FastAPI) |
-| `docker` | Docker container deployment |
-| `nginx` | Nginx reverse proxy configuration |
-| `mysql` | MySQL database installation |
-| `redis` | Redis cache service |
-| `nextjs` | Next.js application deployment |
-
-## Built-in Scripts
-
-| Script | Description |
-|--------|-------------|
-| `sys-info` | Display system information |
-| `disk-usage` | Show disk space usage |
-| `network-info` | Display network configuration |
-
-## Security Features
-
-OpenAsst CLI includes built-in security protections:
-
-- **Dangerous Command Detection** - Blocks potentially harmful commands (rm -rf /, fork bombs, etc.)
-- **Sensitive Path Protection** - Warns when accessing system files
-- **Confirmation Prompts** - Requires confirmation for critical operations
-- **Input Sanitization** - Sanitizes user input to prevent injection
-
-## Architecture
-
-```
-src/
-├── commands/          # CLI command handlers
-│   ├── ai.ts         # AI task execution
-│   ├── do.ts         # Smart task engine command
-│   ├── deploy.ts     # Deployment commands
-│   ├── service.ts    # Service management
-│   └── ...
-├── core/             # Core modules
-│   ├── smart-task-engine.ts  # Intelligent task execution
-│   ├── ai-assistant.ts       # AI integration
-│   ├── error-handler.ts      # Error detection & fixing
-│   ├── security-guard.ts     # Security checks
-│   ├── system-operations.ts  # System utilities
-│   └── ...
-├── utils/            # Utility functions
-└── types.ts          # TypeScript definitions
-```
-
-## Development
-
-```bash
-# Development mode
-npm run dev
-
-# Build
-npm run build
-
-# Run
-npm start
-```
-
-## Safety Notice
-
-⚠️ **Important Security Tips**
-
-- Commands are previewed before execution and require confirmation
-- Carefully review AI-generated commands before confirming
-- Avoid executing commands you don't understand
-- Test in a safe environment first
-- The `-y` flag skips confirmations - use with caution
-
-## License
-
-MIT
+- Blocks dangerous commands (`rm -rf /`, `mkfs`, etc.)
+- Warns about sudo operations
+- Requires confirmation for destructive actions
+- Sandboxed command execution
 
 ---
 
-## New Features
+## All Commands
 
-### API Sharing
+| Command | Description |
+|---------|-------------|
+| `openasst do <task>` | Execute task with natural language |
+| `openasst assistant` | Interactive assistant mode |
+| `openasst config` | Configure API settings |
+| `openasst deploy <source>` | Deploy from documentation |
+| `openasst auto <source>` | Auto deploy from Git |
+| `openasst api share` | Share API with other tools |
+| `openasst skill list` | List installed skills |
+| `openasst schedule list` | List scheduled tasks |
+| `openasst service list` | List background services |
+| `openasst monitor start` | Start monitoring |
+| `openasst analyze` | Analyze project structure |
+| `openasst market list` | Browse script marketplace |
 
-Share your AI API with other tools:
+---
 
-```bash
-# List available tools
-openasst api tools
+## License
 
-# Share API with a specific tool
-openasst api share claude-code
-openasst api share cursor
-openasst api share aider
+MIT License - see [LICENSE](LICENSE) for details.
 
-# Export as environment variables
-openasst api export
-```
+---
 
-### Skill System
+<p align="center">
+  Made with ❤️ by OpenAsst Team
+</p>
 
-Install and manage skills to extend functionality:
-
-```bash
-# Install built-in skills
-openasst skill init
-
-# List installed skills
-openasst skill list
-
-# Run a skill command
-openasst skill run git-ops status
-openasst skill run docker-ops ps
-openasst skill run system-ops disk
-
-# Remove a skill
-openasst skill remove <skill-id>
-```
-
-**Built-in Skills:**
-
-| Skill | Commands |
-|-------|----------|
-| `git-ops` | status, pull, push, commit |
-| `docker-ops` | ps, images, stop-all, prune |
-| `system-ops` | update, clean, disk, memory |
-
-### Scheduled Tasks
-
-Create and manage scheduled tasks:
-
-```bash
-# List scheduled tasks
-openasst schedule list
-
-# Add a new scheduled task (interactive)
-openasst schedule add
-
-# Remove a task
-openasst schedule remove <task-id>
-
-# Enable/disable a task
-openasst schedule toggle <task-id> --enable
-openasst schedule toggle <task-id> --disable
-```
