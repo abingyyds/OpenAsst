@@ -132,6 +132,12 @@ export default function DashboardPage() {
             >
               @ create_script
             </Link>
+            <Link
+              href="/dashboard/batch"
+              className="block px-4 py-3 border border-yellow-500/50 text-yellow-400 rounded hover:bg-yellow-900/20 text-center font-mono"
+            >
+              ⚡ batch_control
+            </Link>
           </div>
         </div>
 
