@@ -1,5 +1,5 @@
 import { supabase } from '../supabase'
-import { getApiHeaders } from '../api-config'
+import { getApiHeaders, getApiHeadersWithAuth } from '../api-config'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
@@ -71,7 +71,7 @@ export const chatApi = {
   async chatWithAI(serverId: string, message: string, language?: string): Promise<AIChatResponse> {
     const headers = {
       'Content-Type': 'application/json',
-      ...getApiHeaders()
+      ...(await getApiHeadersWithAuth())
     }
 
     const response = await fetch(`${API_BASE_URL}/api/sessions/${serverId}/chat`, {
@@ -97,7 +97,7 @@ export const chatApi = {
   ): Promise<void> {
     const headers = {
       'Content-Type': 'application/json',
-      ...getApiHeaders()
+      ...(await getApiHeadersWithAuth())
     }
 
     try {
@@ -154,7 +154,7 @@ export const chatApi = {
   async autoExecute(serverId: string, task: string): Promise<any> {
     const headers = {
       'Content-Type': 'application/json',
-      ...getApiHeaders()
+      ...(await getApiHeadersWithAuth())
     }
 
     const response = await fetch(`${API_BASE_URL}/api/sessions/${serverId}/auto-execute`, {
@@ -191,7 +191,7 @@ export const chatApi = {
   ): Promise<void> {
     const headers = {
       'Content-Type': 'application/json',
-      ...getApiHeaders()
+      ...(await getApiHeadersWithAuth())
     }
 
     try {
@@ -313,7 +313,7 @@ export const chatApi = {
   }> {
     const headers = {
       'Content-Type': 'application/json',
-      ...getApiHeaders()
+      ...(await getApiHeadersWithAuth())
     }
 
     const response = await fetch(`${API_BASE_URL}/api/cli/execute-task`, {
@@ -334,7 +334,7 @@ export const chatApi = {
   ): Promise<{ success: boolean; analysis: string; timestamp: string }> {
     const headers = {
       'Content-Type': 'application/json',
-      ...getApiHeaders()
+      ...(await getApiHeadersWithAuth())
     }
 
     const response = await fetch(`${API_BASE_URL}/api/cli/analyze-result`, {
