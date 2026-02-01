@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { serverApi, Server } from '@/lib/api/servers'
 import { scriptApi, ScriptTemplate } from '@/lib/api/scripts'
+import { supabase } from '@/lib/supabase'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 interface ServerExecution {
@@ -120,6 +121,10 @@ export default function BatchExecutePage() {
     const abortController = new AbortController()
     abortControllersRef.current.set(serverId, abortController)
 
+    // 获取当前用户ID
+    const { data: { user } } = await supabase.auth.getUser()
+    const userId = user?.id
+
     // 获取自定义API配置
     const savedConfig = localStorage.getItem('apiConfig')
     const apiConfig = savedConfig ? JSON.parse(savedConfig) : {}
@@ -140,6 +145,7 @@ export default function BatchExecutePage() {
 
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (userId) headers['X-User-Id'] = userId
       if (customApiKey) headers['x-api-key'] = customApiKey
       if (customBaseUrl) headers['x-api-base-url'] = customBaseUrl
       if (customModel) headers['x-api-model'] = customModel
