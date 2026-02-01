@@ -2,6 +2,16 @@ import { supabase } from '../supabase'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
+// 获取当前用户ID
+async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    return user?.id || null
+  } catch {
+    return null
+  }
+}
+
 export type ConnectionType = 'ssh' | 'local' | 'docker' | 'docker-remote' | 'kubernetes' | 'wsl'
 
 export interface Server {
@@ -60,24 +70,34 @@ export interface Server {
 
 export const serverApi = {
   async getAll(): Promise<Server[]> {
-    const response = await fetch(`${API_BASE_URL}/api/servers`)
+    const userId = await getCurrentUserId()
+    const headers: Record<string, string> = {}
+    if (userId) headers['X-User-Id'] = userId
+
+    const response = await fetch(`${API_BASE_URL}/api/servers`, { headers })
     if (!response.ok) throw new Error('获取服务器列表失败')
     return response.json()
   },
 
   async getById(id: string): Promise<Server | null> {
-    const response = await fetch(`${API_BASE_URL}/api/servers`)
+    const userId = await getCurrentUserId()
+    const headers: Record<string, string> = {}
+    if (userId) headers['X-User-Id'] = userId
+
+    const response = await fetch(`${API_BASE_URL}/api/servers`, { headers })
     if (!response.ok) throw new Error('获取服务器失败')
     const servers = await response.json()
     return servers.find((s: Server) => s.id === id) || null
   },
 
   async create(server: Omit<Server, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'status'>): Promise<Server> {
+    const userId = await getCurrentUserId()
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (userId) headers['X-User-Id'] = userId
+
     const response = await fetch(`${API_BASE_URL}/api/servers`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(server),
     })
 
