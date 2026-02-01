@@ -37,8 +37,13 @@ export default function BatchExecutePage() {
   }, [])
 
   const checkCustomApi = () => {
-    const apiKey = localStorage.getItem('custom_api_key')
-    setHasCustomApi(!!apiKey && apiKey.length > 10)
+    const savedConfig = localStorage.getItem('apiConfig')
+    if (savedConfig) {
+      const config = JSON.parse(savedConfig)
+      setHasCustomApi(!!config.anthropicApiKey && config.anthropicApiKey.length > 10)
+    } else {
+      setHasCustomApi(false)
+    }
   }
 
   const loadServers = async () => {
@@ -95,7 +100,7 @@ export default function BatchExecutePage() {
         serverName: server?.name || serverId,
         status: 'pending',
         progress: 0,
-        currentStep: '等待开始...',
+        currentStep: 'Waiting...',
         output: []
       })
     })
@@ -116,9 +121,11 @@ export default function BatchExecutePage() {
     abortControllersRef.current.set(serverId, abortController)
 
     // 获取自定义API配置
-    const customApiKey = localStorage.getItem('custom_api_key') || ''
-    const customBaseUrl = localStorage.getItem('custom_api_base_url') || ''
-    const customModel = localStorage.getItem('custom_api_model') || ''
+    const savedConfig = localStorage.getItem('apiConfig')
+    const apiConfig = savedConfig ? JSON.parse(savedConfig) : {}
+    const customApiKey = apiConfig.anthropicApiKey || ''
+    const customBaseUrl = apiConfig.anthropicBaseUrl || ''
+    const customModel = apiConfig.anthropicModel || ''
 
     // 更新状态为运行中
     setExecutions(prev => {
@@ -126,7 +133,7 @@ export default function BatchExecutePage() {
       const exec = newMap.get(serverId)
       if (exec) {
         exec.status = 'running'
-        exec.currentStep = '连接服务器...'
+        exec.currentStep = 'Connecting to server...'
       }
       return newMap
     })
@@ -147,10 +154,10 @@ export default function BatchExecutePage() {
         }
       )
 
-      if (!response.ok) throw new Error('执行失败')
+      if (!response.ok) throw new Error('Execution failed')
 
       const reader = response.body?.getReader()
-      if (!reader) throw new Error('无法读取响应流')
+      if (!reader) throw new Error('Cannot read response stream')
 
       const decoder = new TextDecoder()
       let buffer = ''
@@ -186,7 +193,7 @@ export default function BatchExecutePage() {
         if (exec && exec.status === 'running') {
           exec.status = 'success'
           exec.progress = 100
-          exec.currentStep = '✓ 完成'
+          exec.currentStep = '✓ Done'
         }
         return newMap
       })
@@ -200,7 +207,7 @@ export default function BatchExecutePage() {
         if (exec) {
           exec.status = 'error'
           exec.error = error.message
-          exec.currentStep = '✗ 失败'
+          exec.currentStep = '✗ Failed'
         }
         return newMap
       })
@@ -215,11 +222,11 @@ export default function BatchExecutePage() {
 
       switch (data.type) {
         case 'start':
-          exec.currentStep = '开始执行...'
+          exec.currentStep = 'Starting...'
           exec.progress = 5
           break
         case 'iteration_start':
-          exec.currentStep = `第 ${data.data.iteration} 轮分析`
+          exec.currentStep = `Iteration ${data.data.iteration} analysis`
           exec.progress = Math.min(10 + iteration * 15, 90)
           break
         case 'status':
@@ -237,12 +244,12 @@ export default function BatchExecutePage() {
         case 'complete':
           exec.status = 'success'
           exec.progress = 100
-          exec.currentStep = '✓ 完成'
+          exec.currentStep = '✓ Done'
           break
         case 'error':
           exec.status = 'error'
           exec.error = data.data.message
-          exec.currentStep = '✗ 失败'
+          exec.currentStep = '✗ Failed'
           break
       }
 
@@ -279,39 +286,39 @@ export default function BatchExecutePage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      {/* 标题 */}
+      {/* Title */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-green-400 font-mono">
-          AI 群控面板
+          AI Batch Control Panel
         </h1>
         <button
           onClick={() => router.push('/dashboard')}
           className="text-gray-400 hover:text-green-400 font-mono"
         >
-          返回
+          Back
         </button>
       </div>
 
-      {/* 任务输入 */}
+      {/* Task Input */}
       <div className="terminal-card p-4 mb-4">
         <div className="flex items-center justify-between mb-2">
           <label className="text-green-500 font-mono text-sm">
-            任务指令
+            Task Command
           </label>
           <button
             onClick={() => setShowScripts(!showScripts)}
             className="text-xs px-2 py-1 border border-green-500/50 text-green-400 rounded hover:bg-green-900/20"
             disabled={executing}
           >
-            {showScripts ? '关闭' : '📜 选择脚本'}
+            {showScripts ? 'Close' : 'Select Script'}
           </button>
         </div>
 
-        {/* 脚本选择列表 */}
+        {/* Script Selection */}
         {showScripts && (
           <div className="mb-3 max-h-48 overflow-y-auto border border-green-900/30 rounded p-2 bg-black/30">
             {scripts.length === 0 ? (
-              <p className="text-gray-500 text-sm">暂无脚本</p>
+              <p className="text-gray-500 text-sm">No scripts available</p>
             ) : (
               scripts.slice(0, 10).map(script => (
                 <button
@@ -329,24 +336,24 @@ export default function BatchExecutePage() {
 
         {selectedScript && (
           <div className="mb-2 text-xs text-green-500">
-            已选择脚本: {selectedScript.name}
+            Selected script: {selectedScript.name}
           </div>
         )}
 
         <textarea
           value={task}
           onChange={(e) => { setTask(e.target.value); setSelectedScript(null); }}
-          placeholder="输入要在所有选中服务器上执行的AI任务，或从上方选择脚本..."
+          placeholder="Enter AI task to execute on all selected servers, or select a script above..."
           className="w-full bg-black/50 border border-green-900/50 rounded p-3 text-green-400 font-mono text-sm resize-none h-24 focus:outline-none focus:border-green-500"
           disabled={executing}
         />
       </div>
 
-      {/* 服务器选择 */}
+      {/* Server Selection */}
       <div className="terminal-card p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
           <label className="text-green-500 font-mono text-sm">
-            选择目标服务器 ({selectedServers.length}/{servers.length})
+            Select Target Servers ({selectedServers.length}/{servers.length})
           </label>
           <div className="flex gap-2">
             <button
@@ -354,14 +361,14 @@ export default function BatchExecutePage() {
               className="text-xs text-green-400 hover:text-green-300 font-mono"
               disabled={executing}
             >
-              全选
+              Select All
             </button>
             <button
               onClick={deselectAll}
               className="text-xs text-gray-400 hover:text-gray-300 font-mono"
               disabled={executing}
             >
-              取消全选
+              Deselect All
             </button>
           </div>
         </div>
@@ -392,25 +399,25 @@ export default function BatchExecutePage() {
         </div>
       </div>
 
-      {/* API 提示 */}
+      {/* API Warning */}
       {!hasCustomApi && (
         <div className="terminal-card border-yellow-500/50 p-4 mb-4">
           <p className="text-yellow-400 font-mono text-sm">
-            ⚠️ 群控功能需要配置自定义 API Key
+            ⚠️ Batch control requires custom API Key
           </p>
           <p className="text-gray-400 text-xs mt-1">
-            请在设置中配置您自己的 API Key 后使用群控功能，避免消耗平台额度。
+            Please configure your own API Key in settings before using batch control.
           </p>
           <button
             onClick={() => router.push('/dashboard/settings')}
             className="mt-2 px-3 py-1 text-xs border border-yellow-500/50 text-yellow-400 rounded hover:bg-yellow-900/20"
           >
-            前往设置
+            Go to Settings
           </button>
         </div>
       )}
 
-      {/* 执行按钮 */}
+      {/* Execute Button */}
       <div className="flex gap-3 mb-4">
         {!executing ? (
           <button
@@ -419,8 +426,8 @@ export default function BatchExecutePage() {
             className="flex-1 py-3 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-mono rounded transition"
           >
             {hasCustomApi
-              ? `开始群控执行 (${selectedServers.length} 台服务器)`
-              : '请先配置自定义 API'
+              ? `Start Batch Execution (${selectedServers.length} servers)`
+              : 'Please configure API Key first'
             }
           </button>
         ) : (
@@ -428,21 +435,21 @@ export default function BatchExecutePage() {
             onClick={stopAll}
             className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white font-mono rounded transition"
           >
-            停止所有执行
+            Stop All Executions
           </button>
         )}
       </div>
 
-      {/* 执行状态 */}
+      {/* Execution Status */}
       {executions.size > 0 && (
         <div className="terminal-card p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-green-500 font-mono">执行状态</h2>
+            <h2 className="text-green-500 font-mono">Execution Status</h2>
             <div className="flex gap-4 text-sm font-mono">
               <span className="text-green-400">✓ {completedCount}</span>
               <span className="text-red-400">✗ {errorCount}</span>
               <span className="text-gray-400">
-                总计 {executions.size}
+                Total {executions.size}
               </span>
             </div>
           </div>
@@ -473,7 +480,7 @@ export default function BatchExecutePage() {
                 {/* 错误信息 */}
                 {exec.error && (
                   <div className="mt-2 text-xs text-red-400 font-mono">
-                    错误: {exec.error}
+                    Error: {exec.error}
                   </div>
                 )}
 

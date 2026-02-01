@@ -11,6 +11,7 @@ import NotificationContainer from '@/components/NotificationContainer'
 const navItems = [
   { href: '/dashboard', icon: '>', label: 'Dashboard' },
   { href: '/dashboard/servers', icon: '#', label: 'Servers' },
+  { href: '/dashboard/batch', icon: '&', label: 'Batch Control' },
   { href: '/dashboard/marketplace', icon: '$', label: 'Marketplace' },
   { href: '/dashboard/cli-setup', icon: '@', label: 'CLI Setup' },
   { href: '/dashboard/settings', icon: '*', label: 'Settings' },
