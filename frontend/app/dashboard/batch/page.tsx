@@ -17,6 +17,14 @@ interface ServerExecution {
   error?: string
 }
 
+interface BatchHistory {
+  id: string
+  task: string
+  timestamp: string
+  servers: { id: string; name: string; status: string }[]
+  useCliAgent: boolean
+}
+
 export default function BatchExecutePage() {
   const router = useRouter()
   const { language } = useLanguage()
@@ -30,13 +38,35 @@ export default function BatchExecutePage() {
   const [hasCustomApi, setHasCustomApi] = useState(false)
   const [showScripts, setShowScripts] = useState(false)
   const [useCliAgent, setUseCliAgent] = useState(false)
+  const [batchHistory, setBatchHistory] = useState<BatchHistory[]>([])
+  const [showHistory, setShowHistory] = useState(false)
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map())
 
   useEffect(() => {
     loadServers()
     loadScripts()
     checkCustomApi()
+    loadBatchHistory()
   }, [])
+
+  const loadBatchHistory = () => {
+    try {
+      const saved = localStorage.getItem('batchHistory')
+      if (saved) {
+        setBatchHistory(JSON.parse(saved))
+      }
+    } catch (e) {
+      console.error('Failed to load batch history:', e)
+    }
+  }
+
+  const saveBatchHistory = (history: BatchHistory[]) => {
+    try {
+      localStorage.setItem('batchHistory', JSON.stringify(history.slice(0, 20)))
+    } catch (e) {
+      console.error('Failed to save batch history:', e)
+    }
+  }
 
   const checkCustomApi = () => {
     const savedConfig = localStorage.getItem('apiConfig')
@@ -93,6 +123,18 @@ export default function BatchExecutePage() {
 
     setExecuting(true)
 
+    // Create history entry
+    const historyEntry: BatchHistory = {
+      id: Date.now().toString(),
+      task: task.trim(),
+      timestamp: new Date().toISOString(),
+      servers: selectedServers.map(id => {
+        const server = servers.find(s => s.id === id)
+        return { id, name: server?.name || id, status: 'pending' }
+      }),
+      useCliAgent
+    }
+
     // 初始化所有服务器的执行状态
     const initialExecutions = new Map<string, ServerExecution>()
     selectedServers.forEach(serverId => {
@@ -114,6 +156,20 @@ export default function BatchExecutePage() {
     )
 
     await Promise.allSettled(promises)
+
+    // Save to history after completion
+    setExecutions(prev => {
+      const finalServers = historyEntry.servers.map(s => {
+        const exec = prev.get(s.id)
+        return { ...s, status: exec?.status || 'error' }
+      })
+      historyEntry.servers = finalServers
+      const newHistory = [historyEntry, ...batchHistory].slice(0, 20)
+      setBatchHistory(newHistory)
+      saveBatchHistory(newHistory)
+      return prev
+    })
+
     setExecuting(false)
   }
 
@@ -303,13 +359,56 @@ export default function BatchExecutePage() {
         <h1 className="text-2xl font-bold text-green-400 font-mono">
           AI Batch Control Panel
         </h1>
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="text-gray-400 hover:text-green-400 font-mono"
-        >
-          Back
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="text-gray-400 hover:text-green-400 font-mono text-sm"
+          >
+            {showHistory ? 'Hide History' : `History (${batchHistory.length})`}
+          </button>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="text-gray-400 hover:text-green-400 font-mono"
+          >
+            Back
+          </button>
+        </div>
       </div>
+
+      {/* History Panel */}
+      {showHistory && batchHistory.length > 0 && (
+        <div className="terminal-card p-4 mb-4">
+          <h3 className="text-green-500 font-mono text-sm mb-3">Execution History</h3>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {batchHistory.map(h => (
+              <div key={h.id} className="bg-black/30 p-3 rounded border border-green-900/30">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="text-green-400 text-sm font-mono truncate flex-1">
+                    {h.task.substring(0, 60)}{h.task.length > 60 ? '...' : ''}
+                  </div>
+                  <div className="text-gray-500 text-xs ml-2">
+                    {new Date(h.timestamp).toLocaleString()}
+                  </div>
+                </div>
+                <div className="flex gap-2 text-xs flex-wrap">
+                  {h.servers.map(s => (
+                    <span
+                      key={s.id}
+                      className={`px-2 py-0.5 rounded ${
+                        s.status === 'success' ? 'bg-green-900/30 text-green-400' :
+                        s.status === 'error' ? 'bg-red-900/30 text-red-400' :
+                        'bg-gray-900/30 text-gray-400'
+                      }`}
+                    >
+                      {s.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Task Input */}
       <div className="terminal-card p-4 mb-4">
@@ -492,9 +591,12 @@ export default function BatchExecutePage() {
                 className="bg-black/30 rounded p-3 border border-green-900/30"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono text-green-400">
-                    {exec.serverName}
-                  </span>
+                  <button
+                    onClick={() => router.push(`/dashboard/servers/${exec.serverId}`)}
+                    className="font-mono text-green-400 hover:text-green-300 hover:underline"
+                  >
+                    {exec.serverName} →
+                  </button>
                   <span className={`font-mono text-sm ${getStatusColor(exec.status)}`}>
                     {exec.currentStep}
                   </span>
