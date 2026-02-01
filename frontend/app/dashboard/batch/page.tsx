@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { serverApi, Server } from '@/lib/api/servers'
+import { scriptApi, ScriptTemplate } from '@/lib/api/scripts'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 interface ServerExecution {
@@ -19,15 +20,19 @@ export default function BatchExecutePage() {
   const router = useRouter()
   const { language } = useLanguage()
   const [servers, setServers] = useState<Server[]>([])
+  const [scripts, setScripts] = useState<ScriptTemplate[]>([])
   const [selectedServers, setSelectedServers] = useState<string[]>([])
+  const [selectedScript, setSelectedScript] = useState<ScriptTemplate | null>(null)
   const [task, setTask] = useState('')
   const [executing, setExecuting] = useState(false)
   const [executions, setExecutions] = useState<Map<string, ServerExecution>>(new Map())
   const [hasCustomApi, setHasCustomApi] = useState(false)
+  const [showScripts, setShowScripts] = useState(false)
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map())
 
   useEffect(() => {
     loadServers()
+    loadScripts()
     checkCustomApi()
   }, [])
 
@@ -43,6 +48,21 @@ export default function BatchExecutePage() {
     } catch (error) {
       console.error('Failed to load servers:', error)
     }
+  }
+
+  const loadScripts = async () => {
+    try {
+      const data = await scriptApi.getAll()
+      setScripts(data)
+    } catch (error) {
+      console.error('Failed to load scripts:', error)
+    }
+  }
+
+  const selectScript = (script: ScriptTemplate) => {
+    setSelectedScript(script)
+    setTask(`Execute script: ${script.name}\n${script.description}`)
+    setShowScripts(false)
   }
 
   const toggleServer = (serverId: string) => {
@@ -274,13 +294,49 @@ export default function BatchExecutePage() {
 
       {/* 任务输入 */}
       <div className="terminal-card p-4 mb-4">
-        <label className="block text-green-500 font-mono text-sm mb-2">
-          任务指令
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-green-500 font-mono text-sm">
+            任务指令
+          </label>
+          <button
+            onClick={() => setShowScripts(!showScripts)}
+            className="text-xs px-2 py-1 border border-green-500/50 text-green-400 rounded hover:bg-green-900/20"
+            disabled={executing}
+          >
+            {showScripts ? '关闭' : '📜 选择脚本'}
+          </button>
+        </div>
+
+        {/* 脚本选择列表 */}
+        {showScripts && (
+          <div className="mb-3 max-h-48 overflow-y-auto border border-green-900/30 rounded p-2 bg-black/30">
+            {scripts.length === 0 ? (
+              <p className="text-gray-500 text-sm">暂无脚本</p>
+            ) : (
+              scripts.slice(0, 10).map(script => (
+                <button
+                  key={script.id}
+                  onClick={() => selectScript(script)}
+                  className="w-full text-left p-2 hover:bg-green-900/20 rounded mb-1"
+                >
+                  <div className="text-green-400 text-sm font-mono">{script.name}</div>
+                  <div className="text-gray-500 text-xs truncate">{script.description}</div>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+
+        {selectedScript && (
+          <div className="mb-2 text-xs text-green-500">
+            已选择脚本: {selectedScript.name}
+          </div>
+        )}
+
         <textarea
           value={task}
-          onChange={(e) => setTask(e.target.value)}
-          placeholder="输入要在所有选中服务器上执行的AI任务，例如：安装 Docker 并配置..."
+          onChange={(e) => { setTask(e.target.value); setSelectedScript(null); }}
+          placeholder="输入要在所有选中服务器上执行的AI任务，或从上方选择脚本..."
           className="w-full bg-black/50 border border-green-900/50 rounded p-3 text-green-400 font-mono text-sm resize-none h-24 focus:outline-none focus:border-green-500"
           disabled={executing}
         />
