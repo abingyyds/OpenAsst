@@ -9,6 +9,7 @@ import { commandApi } from '@/lib/api/commands'
 import { scriptApi, ScriptTemplate } from '@/lib/api/scripts'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { LocalAgentConnection, checkLocalAgent } from '@/lib/localAgent'
 
 export default function ServerDetailPage() {
   const params = useParams()
@@ -38,11 +39,13 @@ export default function ServerDetailPage() {
   const [executionStats, setExecutionStats] = useState<{iterations: number, commands: number, errors: number} | null>(null)
   const [installingCli, setInstallingCli] = useState(false)
   const [scriptExecuting, setScriptExecuting] = useState(false)
+  const [localAgentConnected, setLocalAgentConnected] = useState(false)
   const commandInputRef = useRef<HTMLInputElement>(null)
   const terminalRef = useRef<HTMLDivElement>(null)
   const aiAnalysisRef = useRef<HTMLDivElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const scriptAbortRef = useRef<AbortController | null>(null)
+  const localAgentRef = useRef<LocalAgentConnection | null>(null)
 
   // 检查CLI安装状态
   const checkCliStatus = async () => {
@@ -86,6 +89,14 @@ export default function ServerDetailPage() {
         console.error('Failed to parse pending script:', error)
       }
     }
+
+    // Cleanup: disconnect local agent when component unmounts
+    return () => {
+      if (localAgentRef.current) {
+        localAgentRef.current.disconnect()
+        localAgentRef.current = null
+      }
+    }
   }, [id])
 
   const loadServerData = async () => {
@@ -97,12 +108,30 @@ export default function ServerDetailPage() {
       setServer(serverData)
       setChatMessages(messages)
 
-      // Auto-connect to establish connection status
-      if (serverData) {
+      // 如果是本地连接类型，连接本地代理
+      if (serverData?.connectionType === 'local') {
+        try {
+          const agentInfo = await checkLocalAgent()
+          if (agentInfo) {
+            const agent = new LocalAgentConnection()
+            const connected = await agent.connect()
+            if (connected) {
+              localAgentRef.current = agent
+              setLocalAgentConnected(true)
+              // 更新服务器状态为已连接
+              setServer(prev => prev ? { ...prev, status: 'connected' } : null)
+              console.log('Local agent connected:', agentInfo)
+            }
+          }
+        } catch (agentError) {
+          console.log('Local agent connection failed:', agentError)
+          setLocalAgentConnected(false)
+        }
+      } else if (serverData) {
+        // 非本地连接，使用后端连接
         try {
           const result = await serverApi.testConnection(id)
           if (result.success) {
-            // Refresh server data to get updated status
             const updatedServer = await serverApi.getById(id)
             if (updatedServer) {
               setServer(updatedServer)
@@ -221,7 +250,7 @@ export default function ServerDetailPage() {
     setHistoryIndex(-1)
 
     // Save to command history
-    const newHistory = [cmd, ...commandHistory.filter(h => h !== cmd)].slice(0, 50) // Keep last 50 commands
+    const newHistory = [cmd, ...commandHistory.filter(h => h !== cmd)].slice(0, 50)
     setCommandHistory(newHistory)
     localStorage.setItem(`command-history-${id}`, JSON.stringify(newHistory))
 
@@ -231,9 +260,21 @@ export default function ServerDetailPage() {
     const aiMode = localStorage.getItem('ai_mode') || 'auto'
 
     try {
-      const result = await commandApi.execute(id, cmd)
-      const newOutput = [...terminalOutput, `$ ${cmd}`, result.output]
+      let result: { output: string; exitCode?: number }
 
+      // 如果是本地连接且本地代理已连接，使用本地代理执行
+      if (server?.connectionType === 'local' && localAgentRef.current?.isConnected()) {
+        const agentResult = await localAgentRef.current.exec(cmd)
+        result = {
+          output: agentResult.stdout || agentResult.stderr || '',
+          exitCode: agentResult.code
+        }
+      } else {
+        // 使用后端执行
+        result = await commandApi.execute(id, cmd)
+      }
+
+      const newOutput = [...terminalOutput, `$ ${cmd}`, result.output]
       setTerminalOutput(newOutput)
 
       // 根据AI模式自动调用AI解释
