@@ -169,6 +169,15 @@ export class AutoExecuteStream {
     let cachedKnowledge: any[] = [];
     let cachedInternet: any[] = [];
 
+    // 获取会话历史记录（之前执行过的任务）
+    let sessionHistory = '';
+    if (this.sessionManager) {
+      sessionHistory = this.sessionManager.getRecentSessionSummary(serverConfig.id);
+      if (sessionHistory) {
+        console.log('Found session history for context');
+      }
+    }
+
     this.sendEvent('start', { task, message: 'Starting intelligent execution...' });
 
     try {
@@ -295,7 +304,8 @@ export class AutoExecuteStream {
           internetSearchResults,
           knowledgeBaseResults,
           language,
-          failedApproaches
+          failedApproaches,
+          sessionHistory
         );
         const planResponse = await this.assistant.chat(planPrompt, [], []);
 
@@ -540,7 +550,8 @@ Example: "📝 Package installed successfully → Ready to use, run 'xxx --versi
     internetSearchResults?: any[],
     knowledgeBaseResults?: any[],
     language?: string,
-    failedApproaches?: string[]
+    failedApproaches?: string[],
+    sessionHistory?: string
   ): string {
     const isFirstIteration = iteration === 1;
 
@@ -651,11 +662,20 @@ Example: "📝 Package installed successfully → Ready to use, run 'xxx --versi
     };
     const langInstruction = language ? languageInstructions[language] || '' : '';
 
+    // Build session history context (previous tasks in this session)
+    let sessionHistoryContext = '';
+    if (sessionHistory && sessionHistory.trim()) {
+      sessionHistoryContext = `\n\n## 📜 Previous Session History (IMPORTANT - Tools Already Installed!):\n\n`;
+      sessionHistoryContext += `The following commands were executed earlier in this session. **Use these tools if they are relevant to the current task!**\n\n`;
+      sessionHistoryContext += `\`\`\`\n${sessionHistory}\n\`\`\`\n`;
+      sessionHistoryContext += `\n**Note**: If a tool was installed above (like openasst, docker, etc.), you can USE it directly without reinstalling!\n`;
+    }
+
     return `You are a Linux system administration expert with deep thinking capabilities. ${langInstruction}
 
 ## 🎯 Task
 ${task}
-
+${sessionHistoryContext}
 ## 💻 System Info
 ${systemInfo.output}
 ${historyContext}

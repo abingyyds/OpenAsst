@@ -65,6 +65,52 @@ export class SessionManager {
     return this.getSession(serverId).messages;
   }
 
+  getCommandHistory(serverId: string, limit: number = 20): ExecutionLog[] {
+    const session = this.getSession(serverId);
+    return session.commandHistory.slice(-limit);
+  }
+
+  getRecentSessionSummary(serverId: string): string {
+    const session = this.getSession(serverId);
+    const recentCommands = session.commandHistory.slice(-30);
+
+    if (recentCommands.length === 0) {
+      return '';
+    }
+
+    // Group commands by approximate task (based on time gaps)
+    const tasks: string[] = [];
+    let currentTask: string[] = [];
+    let lastTime = 0;
+
+    for (const log of recentCommands) {
+      const logTime = log.timestamp ? new Date(log.timestamp).getTime() : Date.now();
+
+      // If more than 5 minutes gap, consider it a new task
+      if (lastTime > 0 && logTime - lastTime > 5 * 60 * 1000) {
+        if (currentTask.length > 0) {
+          tasks.push(currentTask.join('\n'));
+          currentTask = [];
+        }
+      }
+
+      // Only include successful commands or important ones
+      if (log.exitCode === 0 || log.command.includes('install') || log.command.includes('which')) {
+        const outputPreview = log.output?.substring(0, 100) || '';
+        currentTask.push(`$ ${log.command}\n${outputPreview}`);
+      }
+
+      lastTime = logTime;
+    }
+
+    if (currentTask.length > 0) {
+      tasks.push(currentTask.join('\n'));
+    }
+
+    // Return last 3 task summaries
+    return tasks.slice(-3).join('\n\n---\n\n');
+  }
+
   clearSession(serverId: string): void {
     this.sessions.delete(serverId);
   }

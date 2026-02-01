@@ -79,6 +79,10 @@ export class ConnectionManager {
     this.executors.forEach(executor => executor.disconnect());
     this.executors.clear();
   }
+
+  isConnected(serverId: string): boolean {
+    return this.executors.has(serverId);
+  }
 }
 
 // SSH 执行器

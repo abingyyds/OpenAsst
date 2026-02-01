@@ -96,6 +96,22 @@ export default function ServerDetailPage() {
       ])
       setServer(serverData)
       setChatMessages(messages)
+
+      // Auto-connect to establish connection status
+      if (serverData) {
+        try {
+          const result = await serverApi.testConnection(id)
+          if (result.success) {
+            // Refresh server data to get updated status
+            const updatedServer = await serverApi.getById(id)
+            if (updatedServer) {
+              setServer(updatedServer)
+            }
+          }
+        } catch (connectError) {
+          console.log('Auto-connect failed:', connectError)
+        }
+      }
     } catch (error) {
       console.error('Failed to load server data:', error)
     } finally {

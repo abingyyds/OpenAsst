@@ -329,7 +329,31 @@ app.get('/api/servers', async (req, res) => {
     }
     const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
-    res.json(data || []);
+
+    // Transform snake_case to camelCase and add connection status
+    const servers = (data || []).map((s: any) => ({
+      id: s.id,
+      user_id: s.user_id,
+      name: s.name,
+      connectionType: s.connection_type,
+      host: s.host,
+      port: s.port,
+      username: s.username,
+      auth_type: s.auth_type,
+      encrypted_password: s.encrypted_password,
+      encrypted_private_key: s.encrypted_private_key,
+      containerName: s.container_name,
+      containerId: s.container_id,
+      podName: s.pod_name,
+      namespace: s.namespace,
+      distributionName: s.distribution_name,
+      status: connectionManager.isConnected(s.id) ? 'connected' : 'disconnected',
+      last_connected_at: s.last_connected_at,
+      created_at: s.created_at,
+      updated_at: s.updated_at
+    }));
+
+    res.json(servers);
   } catch (err) {
     console.error('获取服务器失败:', err);
     res.json([]);
