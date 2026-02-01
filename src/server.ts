@@ -81,12 +81,18 @@ function dbToServerConfig(server: any): ServerConfig {
 }
 
 // Helper function to get server by ID from Supabase
-async function getServerById(serverId: string): Promise<ServerConfig | null> {
-  const { data, error } = await supabase
+async function getServerById(serverId: string, userId?: string): Promise<ServerConfig | null> {
+  let query = supabase
     .from('servers')
     .select('*')
-    .eq('id', serverId)
-    .single();
+    .eq('id', serverId);
+
+  // 如果提供了userId，则验证服务器属于该用户
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query.single();
 
   if (error || !data) return null;
   return dbToServerConfig(data);
@@ -323,11 +329,17 @@ app.get('/api/models', async (req, res) => {
 app.get('/api/servers', async (req, res) => {
   try {
     const userId = req.headers['x-user-id'] as string;
-    let query = supabase.from('servers').select('*');
-    if (userId) {
-      query = query.eq('user_id', userId);
+
+    // 安全检查：必须提供用户ID，否则返回空数组
+    if (!userId) {
+      return res.json([]);
     }
-    const { data, error } = await query.order('created_at', { ascending: false });
+
+    const { data, error } = await supabase
+      .from('servers')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
     if (error) throw error;
 
     // Transform snake_case to camelCase and add connection status
@@ -406,10 +418,28 @@ app.post('/api/servers', async (req, res) => {
 
 app.delete('/api/servers/:id', async (req, res) => {
   try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(401).json({ error: '未授权：缺少用户ID' });
+    }
+
+    // 先验证服务器属于该用户
+    const { data: server } = await supabase
+      .from('servers')
+      .select('id')
+      .eq('id', req.params.id)
+      .eq('user_id', userId)
+      .single();
+
+    if (!server) {
+      return res.status(404).json({ error: '服务器不存在或无权限删除' });
+    }
+
     const { error } = await supabase
       .from('servers')
       .delete()
-      .eq('id', req.params.id);
+      .eq('id', req.params.id)
+      .eq('user_id', userId);
 
     if (error) throw error;
     connectionManager.disconnect(req.params.id);
@@ -422,14 +452,20 @@ app.delete('/api/servers/:id', async (req, res) => {
 
 app.post('/api/servers/:id/connect', async (req, res) => {
   try {
+    const userId = req.headers['x-user-id'] as string;
+    if (!userId) {
+      return res.status(401).json({ error: '未授权：缺少用户ID' });
+    }
+
     const { data: server, error } = await supabase
       .from('servers')
       .select('*')
       .eq('id', req.params.id)
+      .eq('user_id', userId)
       .single();
 
     if (error || !server) {
-      return res.status(404).json({ error: 'Server not found' });
+      return res.status(404).json({ error: '服务器不存在或无权限访问' });
     }
 
     // Convert DB format to ServerConfig
@@ -561,10 +597,15 @@ app.post('/api/servers/:id/execute', async (req, res) => {
   try {
     const { command } = req.body;
     const serverId = req.params.id;
+    const userId = req.headers['x-user-id'] as string;
 
-    const server = await getServerById(serverId);
+    if (!userId) {
+      return res.status(401).json({ error: '未授权：缺少用户ID' });
+    }
+
+    const server = await getServerById(serverId, userId);
     if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
+      return res.status(404).json({ error: '服务器不存在或无权限访问' });
     }
 
     // 使用 ConnectionManager 获取执行器并执行命令
@@ -1162,6 +1203,11 @@ app.get('/api/scripts/:id/rating', async (req, res) => {
 app.post('/api/scripts/:id/execute', async (req, res) => {
   try {
     const { serverId, parameters } = req.body;
+    const userId = req.headers['x-user-id'] as string;
+
+    if (!userId) {
+      return res.status(401).json({ error: '未授权：缺少用户ID' });
+    }
 
     // Get script from Supabase
     const { data: script, error: scriptError } = await supabase
@@ -1178,10 +1224,10 @@ app.post('/api/scripts/:id/execute', async (req, res) => {
       return res.status(400).json({ error: 'Server ID is required' });
     }
 
-    // 确保服务器已连接
-    const server = await getServerById(serverId);
+    // 确保服务器已连接，并验证用户权限
+    const server = await getServerById(serverId, userId);
     if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
+      return res.status(404).json({ error: '服务器不存在或无权限访问' });
     }
 
     // 获取执行器
@@ -1296,6 +1342,11 @@ app.post('/api/sessions/:serverId/auto-execute', async (req, res) => {
   try {
     const { task } = req.body;
     const serverId = req.params.serverId;
+    const userId = req.headers['x-user-id'] as string;
+
+    if (!userId) {
+      return res.status(401).json({ error: '未授权：缺少用户ID' });
+    }
 
     // 检查是否有自定义API凭证
     const customApiKey = req.headers['x-api-key'] as string;
@@ -1311,10 +1362,10 @@ app.post('/api/sessions/:serverId/auto-execute', async (req, res) => {
         )
       : claudeAssistant;
 
-    // 确保服务器已连接
-    const server = await getServerById(serverId);
+    // 确保服务器已连接，并验证用户权限
+    const server = await getServerById(serverId, userId);
     if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
+      return res.status(404).json({ error: '服务器不存在或无权限访问' });
     }
 
     // 获取执行器
@@ -1529,6 +1580,11 @@ app.post('/api/sessions/:serverId/auto-execute/stream', async (req, res) => {
   try {
     const { task, language } = req.body;
     const serverId = req.params.serverId;
+    const userId = req.headers['x-user-id'] as string;
+
+    if (!userId) {
+      return res.status(401).json({ error: '未授权：缺少用户ID' });
+    }
 
     // 检查是否有自定义API凭证
     const customApiKey = req.headers['x-api-key'] as string;
@@ -1544,10 +1600,10 @@ app.post('/api/sessions/:serverId/auto-execute/stream', async (req, res) => {
         )
       : claudeAssistant;
 
-    // 确保服务器已连接
-    const server = await getServerById(serverId);
+    // 确保服务器已连接，并验证用户权限
+    const server = await getServerById(serverId, userId);
     if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
+      return res.status(404).json({ error: '服务器不存在或无权限访问' });
     }
 
     // 获取执行器
@@ -1804,15 +1860,20 @@ app.post('/api/cli/sync-config', async (req, res) => {
 app.post('/api/cli/execute-task', async (req, res) => {
   try {
     const { task, serverId } = req.body;
+    const userId = req.headers['x-user-id'] as string;
+
+    if (!userId) {
+      return res.status(401).json({ error: '未授权：缺少用户ID' });
+    }
 
     if (!task) {
       return res.status(400).json({ error: 'Task is required' });
     }
 
-    // 获取服务器配置
-    const server = await getServerById(serverId);
+    // 获取服务器配置，并验证用户权限
+    const server = await getServerById(serverId, userId);
     if (!server) {
-      return res.status(404).json({ error: 'Server not found' });
+      return res.status(404).json({ error: '服务器不存在或无权限访问' });
     }
 
     // 获取执行器

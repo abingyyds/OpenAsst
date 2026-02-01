@@ -1,4 +1,16 @@
+import { supabase } from '../supabase'
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+
+// 获取当前用户ID
+async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    return user?.id || null
+  } catch {
+    return null
+  }
+}
 
 export interface CommandExecutionResult {
   success: boolean
@@ -10,11 +22,13 @@ export interface CommandExecutionResult {
 
 export const commandApi = {
   async execute(serverId: string, command: string): Promise<CommandExecutionResult> {
+    const userId = await getCurrentUserId()
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (userId) headers['X-User-Id'] = userId
+
     const response = await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ command }),
     })
 

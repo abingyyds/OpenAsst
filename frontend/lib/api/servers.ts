@@ -106,16 +106,26 @@ export const serverApi = {
   },
 
   async delete(id: string): Promise<void> {
+    const userId = await getCurrentUserId()
+    const headers: Record<string, string> = {}
+    if (userId) headers['X-User-Id'] = userId
+
     const response = await fetch(`${API_BASE_URL}/api/servers/${id}`, {
       method: 'DELETE',
+      headers,
     })
 
     if (!response.ok) throw new Error('删除服务器失败')
   },
 
   async testConnection(id: string): Promise<{ success: boolean; error?: string }> {
+    const userId = await getCurrentUserId()
+    const headers: Record<string, string> = {}
+    if (userId) headers['X-User-Id'] = userId
+
     const response = await fetch(`${API_BASE_URL}/api/servers/${id}/connect`, {
       method: 'POST',
+      headers,
     })
 
     if (!response.ok) {
