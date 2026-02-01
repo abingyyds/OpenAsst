@@ -160,16 +160,32 @@ function executeCommand(command, id, socket) {
   console.log(`[Agent] Executing command: ${command}`);
 
   const isWindows = os.platform() === 'win32';
-  const shell = isWindows ? 'cmd.exe' : '/bin/bash';
-  // Windows: 先切换到 UTF-8 编码再执行命令
-  const shellArgs = isWindows
-    ? ['/c', 'chcp 65001 >nul && ' + command]
-    : ['-c', command];
 
-  const child = spawn(shell, shellArgs, {
-    cwd: os.homedir(),
-    env: { ...process.env, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8' }
-  });
+  let shell, shellArgs, spawnOptions;
+
+  if (isWindows) {
+    // Windows: 使用 PowerShell 并强制 UTF-8 输出
+    shell = 'powershell.exe';
+    shellArgs = [
+      '-NoProfile',
+      '-ExecutionPolicy', 'Bypass',
+      '-Command',
+      `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ${command}`
+    ];
+    spawnOptions = {
+      cwd: os.homedir(),
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+    };
+  } else {
+    shell = '/bin/bash';
+    shellArgs = ['-c', command];
+    spawnOptions = {
+      cwd: os.homedir(),
+      env: { ...process.env, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8' }
+    };
+  }
+
+  const child = spawn(shell, shellArgs, spawnOptions);
 
   let stdout = '';
   let stderr = '';
