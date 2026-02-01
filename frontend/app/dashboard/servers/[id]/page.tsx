@@ -685,28 +685,38 @@ export default function ServerDetailPage() {
     const abortController = new AbortController()
     abortControllerRef.current = abortController
 
+    // CLI Agent 模式：将任务转换为CLI命令
+    const actualTask = useCliAgent
+      ? `Use OpenAsst CLI to execute this task. First check if CLI is installed with 'which openasst'. If not installed, install it with: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash. Then use 'openasst do "${task}"' to execute the task. Available CLI commands: openasst do, openasst run, openasst devices, openasst hub, openasst agent.`
+      : task
+
     // 添加用户任务
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       server_id: id,
       user_id: 'current-user',
       role: 'user',
-      content: `🔄 Smart Execute: ${task.length > 100 ? task.substring(0, 100) + '...' : task}`,
+      content: useCliAgent
+        ? `🔧 CLI Agent: ${task.length > 100 ? task.substring(0, 100) + '...' : task}`
+        : `🔄 Smart Execute: ${task.length > 100 ? task.substring(0, 100) + '...' : task}`,
       created_at: new Date().toISOString()
     }
     setChatMessages(prev => [...prev, userMsg])
 
     // Truncate task display for terminal (keep full task for execution)
     const taskDisplay = task.length > 80 ? task.substring(0, 80) + '...' : task
-    setTerminalOutput(prev => [...prev, '', '='.repeat(60), `🔄 Smart Execute: ${taskDisplay}`, '='.repeat(60)])
-    setAiMessages(prev => [...prev, '📋 Layer 1: Stream execution engine starting...'])
+    const modeLabel = useCliAgent ? '🔧 CLI Agent' : '🔄 Smart Execute'
+    setTerminalOutput(prev => [...prev, '', '='.repeat(60), `${modeLabel}: ${taskDisplay}`, '='.repeat(60)])
+    setAiMessages(prev => [...prev, useCliAgent
+      ? '🔧 CLI Agent mode: Will use OpenAsst CLI for execution...'
+      : '📋 Layer 1: Stream execution engine starting...'])
 
     let fullExecutionResult: any = null
     let wasAborted = false
 
     try {
       // 第一层：使用流式执行，实时显示终端内容
-      await chatApi.autoExecuteStream(id, task, {
+      await chatApi.autoExecuteStream(id, actualTask, {
         onStart: (data) => {
           flushSync(() => {
             setAiMessages(prev => [...prev, `📋 ${data.message}`])
