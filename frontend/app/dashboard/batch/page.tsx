@@ -23,11 +23,18 @@ export default function BatchExecutePage() {
   const [task, setTask] = useState('')
   const [executing, setExecuting] = useState(false)
   const [executions, setExecutions] = useState<Map<string, ServerExecution>>(new Map())
+  const [hasCustomApi, setHasCustomApi] = useState(false)
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map())
 
   useEffect(() => {
     loadServers()
+    checkCustomApi()
   }, [])
+
+  const checkCustomApi = () => {
+    const apiKey = localStorage.getItem('custom_api_key')
+    setHasCustomApi(!!apiKey && apiKey.length > 10)
+  }
 
   const loadServers = async () => {
     try {
@@ -88,6 +95,11 @@ export default function BatchExecutePage() {
     const abortController = new AbortController()
     abortControllersRef.current.set(serverId, abortController)
 
+    // 获取自定义API配置
+    const customApiKey = localStorage.getItem('custom_api_key') || ''
+    const customBaseUrl = localStorage.getItem('custom_api_base_url') || ''
+    const customModel = localStorage.getItem('custom_api_model') || ''
+
     // 更新状态为运行中
     setExecutions(prev => {
       const newMap = new Map(prev)
@@ -100,11 +112,16 @@ export default function BatchExecutePage() {
     })
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (customApiKey) headers['x-api-key'] = customApiKey
+      if (customBaseUrl) headers['x-api-base-url'] = customBaseUrl
+      if (customModel) headers['x-api-model'] = customModel
+
       const response = await fetch(
         `${API_BASE_URL}/api/sessions/${serverId}/auto-execute/stream`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ task, language }),
           signal: abortController.signal
         }
@@ -319,15 +336,36 @@ export default function BatchExecutePage() {
         </div>
       </div>
 
+      {/* API 提示 */}
+      {!hasCustomApi && (
+        <div className="terminal-card border-yellow-500/50 p-4 mb-4">
+          <p className="text-yellow-400 font-mono text-sm">
+            ⚠️ 群控功能需要配置自定义 API Key
+          </p>
+          <p className="text-gray-400 text-xs mt-1">
+            请在设置中配置您自己的 API Key 后使用群控功能，避免消耗平台额度。
+          </p>
+          <button
+            onClick={() => router.push('/dashboard/settings')}
+            className="mt-2 px-3 py-1 text-xs border border-yellow-500/50 text-yellow-400 rounded hover:bg-yellow-900/20"
+          >
+            前往设置
+          </button>
+        </div>
+      )}
+
       {/* 执行按钮 */}
       <div className="flex gap-3 mb-4">
         {!executing ? (
           <button
             onClick={startBatchExecution}
-            disabled={selectedServers.length === 0 || !task.trim()}
+            disabled={!hasCustomApi || selectedServers.length === 0 || !task.trim()}
             className="flex-1 py-3 bg-green-600 hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-mono rounded transition"
           >
-            开始群控执行 ({selectedServers.length} 台服务器)
+            {hasCustomApi
+              ? `开始群控执行 (${selectedServers.length} 台服务器)`
+              : '请先配置自定义 API'
+            }
           </button>
         ) : (
           <button
