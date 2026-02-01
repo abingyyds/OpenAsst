@@ -381,11 +381,20 @@ export class AutoExecuteStream {
               ? log.output.substring(0, 500) + '\n... (output truncated)'
               : log.output;
 
+            // AI分析命令输出
+            const outputAnalysis = await this.analyzeCommandOutput(
+              command,
+              truncatedOutput,
+              log.exitCode,
+              language
+            );
+
             this.sendEvent('command_output', {
               command: log.command,
               output: truncatedOutput,
               exitCode: log.exitCode,
-              explanation
+              explanation,
+              analysis: outputAnalysis
             });
 
             // 检测是否执行了安装命令
@@ -491,6 +500,33 @@ export class AutoExecuteStream {
     ];
 
     return installPatterns.some(pattern => pattern.test(command));
+  }
+
+  /**
+   * AI分析命令输出
+   */
+  private async analyzeCommandOutput(
+    command: string,
+    output: string,
+    exitCode: number,
+    language?: string
+  ): Promise<string> {
+    const lang = language === 'zh' ? '中文' : 'English';
+    const prompt = `Analyze this command execution briefly (respond in ${lang}, max 2 sentences):
+
+Command: ${command}
+Exit code: ${exitCode}
+Output: ${output.substring(0, 300)}
+
+Format: "📝 [What happened] → [What user should know]"
+Example: "📝 Package installed successfully → Ready to use, run 'xxx --version' to verify"`;
+
+    try {
+      const analysis = await this.assistant.chat(prompt, [], []);
+      return analysis.trim();
+    } catch {
+      return exitCode === 0 ? '✓ 执行成功' : '✗ 执行失败';
+    }
   }
 
   private buildPrompt(

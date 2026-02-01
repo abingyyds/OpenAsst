@@ -487,7 +487,8 @@ export default function ServerDetailPage() {
               }
             }
 
-            const analysis = analyzeCommand(data.command, data.output, data.exitCode)
+            // 优先使用后端AI分析，否则使用本地分析
+            const analysis = data.analysis || analyzeCommand(data.command, data.output, data.exitCode)
 
             setAiAnalysis(prev => [...prev, {
               command: data.command,
@@ -668,10 +669,11 @@ export default function ServerDetailPage() {
             if (data.output) {
               setTerminalOutput(prev => [...prev, data.output])
             }
-            const status = data.exitCode === 0 ? '✓ 成功' : `✗ 失败 (${data.exitCode})`
+            // 使用后端AI分析结果，如果没有则显示简单状态
+            const analysis = data.analysis || (data.exitCode === 0 ? '✓ 执行成功' : `✗ 执行失败 (${data.exitCode})`)
             setAiAnalysis(prev => [...prev, {
               command: data.command,
-              analysis: status
+              analysis: analysis
             }])
           })
         },
