@@ -29,6 +29,7 @@ export default function BatchExecutePage() {
   const [executions, setExecutions] = useState<Map<string, ServerExecution>>(new Map())
   const [hasCustomApi, setHasCustomApi] = useState(false)
   const [showScripts, setShowScripts] = useState(false)
+  const [useCliAgent, setUseCliAgent] = useState(false)
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map())
 
   useEffect(() => {
@@ -125,6 +126,11 @@ export default function BatchExecutePage() {
     const { data: { user } } = await supabase.auth.getUser()
     const userId = user?.id
 
+    // CLI Agent 模式：将任务转换为CLI命令
+    const actualTask = useCliAgent
+      ? `Use OpenAsst CLI to execute this task. First check if CLI is installed with 'which openasst'. If not installed, install it with: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash. Then use 'openasst do "${task}"' to execute the task.`
+      : task
+
     // 获取自定义API配置
     const savedConfig = localStorage.getItem('apiConfig')
     const apiConfig = savedConfig ? JSON.parse(savedConfig) : {}
@@ -138,7 +144,7 @@ export default function BatchExecutePage() {
       const exec = newMap.get(serverId)
       if (exec) {
         exec.status = 'running'
-        exec.currentStep = 'Connecting to server...'
+        exec.currentStep = useCliAgent ? 'CLI Agent starting...' : 'Connecting to server...'
       }
       return newMap
     })
@@ -155,7 +161,7 @@ export default function BatchExecutePage() {
         {
           method: 'POST',
           headers,
-          body: JSON.stringify({ task, language }),
+          body: JSON.stringify({ task: actualTask, language }),
           signal: abortController.signal
         }
       )
@@ -353,6 +359,25 @@ export default function BatchExecutePage() {
           className="w-full bg-black/50 border border-green-900/50 rounded p-3 text-green-400 font-mono text-sm resize-none h-24 focus:outline-none focus:border-green-500"
           disabled={executing}
         />
+
+        {/* CLI Agent Mode Toggle */}
+        <div className="flex items-center gap-3 mt-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={useCliAgent}
+              onChange={(e) => setUseCliAgent(e.target.checked)}
+              className="w-4 h-4 accent-green-500"
+              disabled={executing}
+            />
+            <span className="text-green-400 font-mono text-sm">Use CLI Agent</span>
+          </label>
+          {useCliAgent && (
+            <span className="text-xs text-gray-500 font-mono">
+              (Will install & use OpenAsst CLI on each server)
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Server Selection */}
