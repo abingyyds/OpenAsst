@@ -74,6 +74,25 @@
         "openasst api share claude-code",
         "openasst api tools"
       ]
+    },
+    {
+      "title": "Sync API to remote devices",
+      "keywords": ["api", "sync", "remote", "devices"],
+      "solution": "Sync API configuration to remote servers so they can use the same AI API",
+      "commands": [
+        "openasst api sync --all",
+        "openasst api sync --devices server1,server2"
+      ]
+    },
+    {
+      "title": "Natural language cluster control",
+      "keywords": ["do", "cluster", "all", "tags", "group"],
+      "solution": "Execute AI tasks on multiple servers using natural language",
+      "commands": [
+        "openasst do \"install nginx\" --all",
+        "openasst do \"update packages\" --tags production",
+        "openasst do \"restart service\" --group frontend -y"
+      ]
     }
   ]
 }

@@ -179,6 +179,33 @@ openasst run "command" --devices server1,server2
 openasst run "command" --group frontend
 ```
 
+### Natural Language Cluster Control
+
+Execute AI tasks on multiple servers using natural language:
+
+```bash
+# Install nginx on all servers
+openasst do "install nginx" --all
+
+# Update packages on servers with specific tags
+openasst do "update all system packages" --tags production -y
+
+# Deploy to a group
+openasst do "pull latest code and restart" --group frontend
+```
+
+### API Sync to Remote Devices
+
+Sync API configuration to remote servers:
+
+```bash
+# Sync to all devices
+openasst api sync --all
+
+# Sync to specific devices
+openasst api sync --devices server1,server2
+```
+
 ### Cluster Commands
 
 | Command | Description |

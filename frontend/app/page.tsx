@@ -284,6 +284,22 @@ export default function Home() {
                 <div className="text-gray-500 pl-4">Execute command on all servers</div>
               </div>
 
+              {/* Do Cluster */}
+              <div>
+                <div className="text-green-400 mb-1">
+                  <span className="text-green-600">$</span> openasst do &quot;install nginx&quot; --all
+                </div>
+                <div className="text-gray-500 pl-4">AI task on all servers</div>
+              </div>
+
+              {/* API Sync */}
+              <div>
+                <div className="text-green-400 mb-1">
+                  <span className="text-green-600">$</span> openasst api sync --all
+                </div>
+                <div className="text-gray-500 pl-4">Sync API config to remote devices</div>
+              </div>
+
               {/* Help */}
               <div>
                 <div className="text-green-400 mb-1">
