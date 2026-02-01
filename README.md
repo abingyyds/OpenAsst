@@ -7,8 +7,8 @@
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
   <a href="#cli-features">CLI Features</a> •
+  <a href="#cluster-control">Cluster Control</a> •
   <a href="#web-dashboard">Web Dashboard</a> •
-  <a href="#usage">Usage</a> •
   <a href="#api-sharing">API Sharing</a>
 </p>
 
@@ -63,6 +63,7 @@ openasst do "install nginx and configure it for port 8080"
 
 | Feature | Description |
 |---------|-------------|
+| 🎛️ **Cluster Control** | Manage and execute commands on multiple servers simultaneously |
 | 🤖 **Smart Task Engine** | Execute any task using natural language |
 | 🔧 **Auto Error Recovery** | Intelligent error detection and auto-fixing |
 | 🔒 **Security Guard** | Built-in protection against dangerous commands |
@@ -122,6 +123,75 @@ openasst api share
 
 **Supported Tools:** Claude Code, Cursor, Continue, Aider
 
+---
+
+## Cluster Control
+
+OpenAsst's powerful cluster control feature lets you manage multiple servers from a single command line.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│              Master (Your Machine)               │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
+│  │ CLI      │  │ WSHub    │  │ DeviceManager│  │
+│  └──────────┘  └──────────┘  └──────────────┘  │
+└─────────────────────┬───────────────────────────┘
+                      │ WebSocket (Port 9527)
+       ┌──────────────┼──────────────┐
+       ▼              ▼              ▼
+ ┌──────────┐  ┌──────────┐  ┌──────────┐
+ │ Agent 1  │  │ Agent 2  │  │ Agent N  │
+ │ Server A │  │ Server B │  │ Server C │
+ └──────────┘  └──────────┘  └──────────┘
+```
+
+### Quick Start - Cluster
+
+```bash
+# 1. Add devices
+openasst devices add
+
+# 2. Start the hub
+openasst hub start
+
+# 3. Deploy agents to servers
+openasst agent deploy --all
+
+# 4. Execute commands on all servers
+openasst run "uname -a" --all
+```
+
+### Batch Execution
+
+```bash
+# Execute on all devices
+openasst run "command" --all
+
+# Execute on devices with specific tags
+openasst run "command" --tags web,production
+
+# Execute on specific devices
+openasst run "command" --devices server1,server2
+
+# Execute on a group
+openasst run "command" --group frontend
+```
+
+### Cluster Commands
+
+| Command | Description |
+|---------|-------------|
+| `openasst devices list` | List all devices |
+| `openasst devices add` | Add a new device |
+| `openasst devices remove <name>` | Remove a device |
+| `openasst hub start` | Start WebSocket hub |
+| `openasst hub status` | Show hub status |
+| `openasst run <cmd> --all` | Execute on all devices |
+| `openasst agent deploy --all` | Deploy agent to devices |
+| `openasst agent status` | Show agent status |
+
 ### Interactive Assistant
 
 ```bash
@@ -138,6 +208,11 @@ openasst assistant
 | `openasst deploy <source>` | Deploy from documentation |
 | `openasst auto <source>` | Auto deploy from Git |
 | `openasst api share` | Share API with other tools |
+| `openasst devices list` | List all cluster devices |
+| `openasst devices add` | Add a new device |
+| `openasst hub start` | Start WebSocket hub |
+| `openasst run <cmd> --all` | Execute on all devices |
+| `openasst agent deploy --all` | Deploy agent to devices |
 | `openasst skill list` | List installed skills |
 | `openasst schedule list` | List scheduled tasks |
 | `openasst service list` | List background services |
@@ -152,10 +227,13 @@ The Web Dashboard provides a visual interface for managing remote servers. It's 
 ### Features
 
 - 🖥️ **Server Management** - Add and manage multiple servers (SSH)
+- 🎛️ **Batch Control** - Execute AI tasks on multiple servers simultaneously
+- 🤖 **OpenAsst Terminal Agent** - Deploy and use CLI agent on remote servers
 - 📜 **Script Marketplace** - Share and use command templates
-- 🤖 **AI Assistant** - Chat with AI for server management help
+- 💬 **AI Assistant** - Chat with AI for server management help
 - ⚡ **Real-time Execution** - Stream command output in browser
 - 🔄 **One-click CLI Install** - Install CLI on servers via AI
+- 🔒 **User Isolation** - Secure multi-user environment
 
 ### Web Dashboard Setup
 

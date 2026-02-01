@@ -142,13 +142,32 @@ export default function Home() {
           />
           <FeatureCard
             icon="#"
-            title="Auto Error Recovery"
-            description="Intelligent error detection and auto-fixing"
+            title="Cluster Control"
+            description="Manage and execute on multiple servers simultaneously"
           />
           <FeatureCard
             icon="$"
             title="API Sharing"
             description="Share AI API with Claude Code, Cursor, Aider"
+          />
+        </div>
+
+        {/* Second Feature Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full mt-6">
+          <FeatureCard
+            icon="@"
+            title="Terminal Agent"
+            description="Deploy OpenAsst agent on remote servers"
+          />
+          <FeatureCard
+            icon="!"
+            title="Auto Recovery"
+            description="Intelligent error detection and auto-fixing"
+          />
+          <FeatureCard
+            icon="*"
+            title="Script Marketplace"
+            description="Share and use command templates"
           />
         </div>
 
@@ -249,6 +268,22 @@ export default function Home() {
                 <div className="text-gray-500 pl-4">Configure API key and settings</div>
               </div>
 
+              {/* Devices */}
+              <div>
+                <div className="text-green-400 mb-1">
+                  <span className="text-green-600">$</span> openasst devices list
+                </div>
+                <div className="text-gray-500 pl-4">List all cluster devices</div>
+              </div>
+
+              {/* Run */}
+              <div>
+                <div className="text-green-400 mb-1">
+                  <span className="text-green-600">$</span> openasst run &quot;uname -a&quot; --all
+                </div>
+                <div className="text-gray-500 pl-4">Execute command on all servers</div>
+              </div>
+
               {/* Help */}
               <div>
                 <div className="text-green-400 mb-1">
@@ -256,6 +291,29 @@ export default function Home() {
                 </div>
                 <div className="text-gray-500 pl-4">Show all available commands</div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Web Dashboard Section */}
+        <div className="mt-16 w-full max-w-4xl">
+          <h2 className="text-2xl font-bold text-white mb-6 text-center font-mono"># Web Dashboard</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="terminal-card p-4">
+              <div className="text-green-400 font-mono mb-2">Server Management</div>
+              <div className="text-gray-500 text-sm">Add and manage multiple SSH servers</div>
+            </div>
+            <div className="terminal-card p-4">
+              <div className="text-green-400 font-mono mb-2">Batch Control</div>
+              <div className="text-gray-500 text-sm">Execute AI tasks on multiple servers</div>
+            </div>
+            <div className="terminal-card p-4">
+              <div className="text-green-400 font-mono mb-2">Terminal Agent</div>
+              <div className="text-gray-500 text-sm">Deploy OpenAsst agent remotely</div>
+            </div>
+            <div className="terminal-card p-4">
+              <div className="text-green-400 font-mono mb-2">Script Marketplace</div>
+              <div className="text-gray-500 text-sm">Share and use command templates</div>
             </div>
           </div>
         </div>
