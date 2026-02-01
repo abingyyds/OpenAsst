@@ -182,14 +182,30 @@ export default function BatchExecutePage() {
     const { data: { user } } = await supabase.auth.getUser()
     const userId = user?.id
 
-    // CLI Agent 模式：将任务转换为CLI命令
-    const actualTask = useCliAgent
-      ? `Use OpenAsst CLI to execute this task. First check if CLI is installed with 'which openasst'. If not installed, install it with: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash. Then use 'openasst do "${task}"' to execute the task.`
-      : task
-
     // 获取自定义API配置
     const savedConfig = localStorage.getItem('apiConfig')
     const apiConfig = savedConfig ? JSON.parse(savedConfig) : {}
+    const customApiKey = apiConfig.anthropicApiKey || ''
+    const customBaseUrl = apiConfig.anthropicBaseUrl || ''
+    const customModel = apiConfig.anthropicModel || ''
+
+    // CLI Agent 模式：将任务转换为CLI命令，包含API配置同步
+    let actualTask = task
+    if (useCliAgent) {
+      const configSteps: string[] = []
+
+      // 构建配置命令
+      if (customApiKey) {
+        const configJson = JSON.stringify({
+          apiKey: customApiKey,
+          baseUrl: customBaseUrl || 'https://api.anthropic.com',
+          model: customModel || 'claude-sonnet-4-20250514'
+        })
+        configSteps.push(`mkdir -p ~/.openasst-cli && echo '${configJson}' > ~/.openasst-cli/config.json`)
+      }
+
+      actualTask = `Use OpenAsst CLI to execute this task. First check if CLI is installed with 'which openasst'. If not installed, install it with: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash. ${configSteps.length > 0 ? `Then configure the API by running: ${configSteps.join(' && ')}. ` : ''}Finally use 'openasst do "${task}"' to execute the task.`
+    }
     const customApiKey = apiConfig.anthropicApiKey || ''
     const customBaseUrl = apiConfig.anthropicBaseUrl || ''
     const customModel = apiConfig.anthropicModel || ''
