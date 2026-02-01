@@ -31,6 +31,8 @@ export default function ServerDetailPage() {
   const [autoExecuting, setAutoExecuting] = useState(false)
   const [autoExecuteResult, setAutoExecuteResult] = useState<any>(null)
   const [executionMode, setExecutionMode] = useState<'stream' | 'twoLayer'>('stream')
+  const [useCliAgent, setUseCliAgent] = useState(false)
+  const [cliAgentInstalled, setCliAgentInstalled] = useState<boolean | null>(null)
   const [analysisResult, setAnalysisResult] = useState<string | null>(null)
   const [autoScroll, setAutoScroll] = useState(true)
   const [showCliPrompt, setShowCliPrompt] = useState(false)
@@ -1289,6 +1291,24 @@ export default function ServerDetailPage() {
 
             {chatMessages.length === 0 && aiMessages.length === 0 && !autoExecuting && (
               <div className="text-green-600 font-mono text-sm">waiting for input...</div>
+            )}
+          </div>
+
+          {/* CLI Agent Mode Toggle */}
+          <div className="flex items-center gap-3 mb-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useCliAgent}
+                onChange={(e) => setUseCliAgent(e.target.checked)}
+                className="w-4 h-4 accent-green-500"
+              />
+              <span className="text-green-400 font-mono text-sm">Use CLI Agent</span>
+            </label>
+            {useCliAgent && (
+              <span className="text-xs text-gray-500 font-mono">
+                (Commands via OpenAsst CLI)
+              </span>
             )}
           </div>
 

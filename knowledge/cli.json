@@ -1,0 +1,79 @@
+{
+  "category": "OpenAsst CLI",
+  "description": "OpenAsst CLI commands and cluster control",
+  "items": [
+    {
+      "title": "Install OpenAsst CLI",
+      "keywords": ["install", "cli", "openasst", "setup"],
+      "solution": "One-liner install: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash",
+      "commands": [
+        "curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash"
+      ]
+    },
+    {
+      "title": "Configure OpenAsst CLI",
+      "keywords": ["config", "api", "key", "configure"],
+      "solution": "Run 'openasst config' to set up API key and model settings",
+      "commands": [
+        "openasst config"
+      ]
+    },
+    {
+      "title": "Execute task with natural language",
+      "keywords": ["do", "task", "execute", "natural language"],
+      "solution": "Use 'openasst do' to execute any task using natural language",
+      "commands": [
+        "openasst do \"install docker\"",
+        "openasst do \"check disk usage\" -y"
+      ]
+    },
+    {
+      "title": "Add device for cluster control",
+      "keywords": ["devices", "add", "server", "cluster"],
+      "solution": "Use 'openasst devices add' to add a new server to cluster",
+      "commands": [
+        "openasst devices add",
+        "openasst devices list"
+      ]
+    },
+    {
+      "title": "Start WebSocket Hub",
+      "keywords": ["hub", "start", "websocket", "master"],
+      "solution": "Start the hub to enable cluster communication",
+      "commands": [
+        "openasst hub start",
+        "openasst hub status"
+      ]
+    },
+    {
+      "title": "Deploy Agent to servers",
+      "keywords": ["agent", "deploy", "install agent"],
+      "solution": "Deploy OpenAsst agent to remote servers",
+      "commands": [
+        "openasst agent deploy --all",
+        "openasst agent deploy --devices server1,server2",
+        "openasst agent status"
+      ]
+    },
+    {
+      "title": "Run command on multiple servers",
+      "keywords": ["run", "batch", "cluster", "all servers"],
+      "solution": "Execute commands on multiple servers simultaneously",
+      "commands": [
+        "openasst run \"uname -a\" --all",
+        "openasst run \"df -h\" --tags production",
+        "openasst run \"docker ps\" --group frontend"
+      ]
+    },
+    {
+      "title": "Share API with other tools",
+      "keywords": ["api", "share", "cursor", "claude code"],
+      "solution": "Share your AI API configuration with other tools",
+      "commands": [
+        "openasst api share",
+        "openasst api share claude-code",
+        "openasst api tools"
+      ]
+    }
+  ]
+}

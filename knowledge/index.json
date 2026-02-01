@@ -1,7 +1,12 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-01-31T15:07:00.850Z",
+  "lastUpdated": "2026-02-02T00:00:00.000Z",
   "categories": [
+    {
+      "id": "cli",
+      "name": "OpenAsst CLI",
+      "description": "CLI commands and cluster control"
+    },
     {
       "id": "system",
       "name": "System Operations",
@@ -29,6 +34,7 @@
     }
   ],
   "files": [
+    "cli.json",
     "system.json",
     "docker.json",
     "network.json",
