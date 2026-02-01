@@ -192,23 +192,36 @@ export default function BatchExecutePage() {
     // CLI Agent 模式：将任务转换为CLI命令，包含API配置同步
     let actualTask = task
     if (useCliAgent) {
-      const configSteps: string[] = []
-
-      // 构建配置命令
+      // 构建配置命令 - API配置必须在执行任务前完成
+      let configCmd = ''
       if (customApiKey) {
         const configJson = JSON.stringify({
           apiKey: customApiKey,
           baseUrl: customBaseUrl || 'https://api.anthropic.com',
           model: customModel || 'claude-sonnet-4-20250514'
         })
-        configSteps.push(`mkdir -p ~/.openasst-cli && echo '${configJson}' > ~/.openasst-cli/config.json`)
+        configCmd = `mkdir -p ~/.openasst-cli && echo '${configJson}' > ~/.openasst-cli/config.json`
       }
 
-      actualTask = `Use OpenAsst CLI to execute this task. First check if CLI is installed with 'which openasst'. If not installed, install it with: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash. ${configSteps.length > 0 ? `Then configure the API by running: ${configSteps.join(' && ')}. ` : ''}Finally use 'openasst do "${task}"' to execute the task.`
+      // 构建完整的任务指令 - 强调必须先配置API
+      if (configCmd) {
+        actualTask = `CRITICAL STEPS - Execute in exact order:
+
+STEP 1: Run this command to configure API (MANDATORY - DO NOT SKIP):
+${configCmd}
+
+STEP 2: Check if OpenAsst CLI is installed:
+which openasst || (curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash)
+
+STEP 3: Execute the user's task:
+openasst do "${task}" -y
+
+WARNING: If you skip STEP 1, the command will fail with "Please run openasst config first". The API config file MUST exist before running openasst.`
+      } else {
+        actualTask = `Install OpenAsst CLI if needed: which openasst || (curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash)
+Then run: openasst do "${task}" -y`
+      }
     }
-    const customApiKey = apiConfig.anthropicApiKey || ''
-    const customBaseUrl = apiConfig.anthropicBaseUrl || ''
-    const customModel = apiConfig.anthropicModel || ''
 
     // 更新状态为运行中
     setExecutions(prev => {
