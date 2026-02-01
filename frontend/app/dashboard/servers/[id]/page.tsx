@@ -697,7 +697,7 @@ export default function ServerDetailPage() {
       user_id: 'current-user',
       role: 'user',
       content: useCliAgent
-        ? `🔧 CLI Agent: ${task.length > 100 ? task.substring(0, 100) + '...' : task}`
+        ? `🔧 Terminal Agent: ${task.length > 100 ? task.substring(0, 100) + '...' : task}`
         : `🔄 Smart Execute: ${task.length > 100 ? task.substring(0, 100) + '...' : task}`,
       created_at: new Date().toISOString()
     }
@@ -705,10 +705,10 @@ export default function ServerDetailPage() {
 
     // Truncate task display for terminal (keep full task for execution)
     const taskDisplay = task.length > 80 ? task.substring(0, 80) + '...' : task
-    const modeLabel = useCliAgent ? '🔧 CLI Agent' : '🔄 Smart Execute'
+    const modeLabel = useCliAgent ? '🔧 Terminal Agent' : '🔄 Smart Execute'
     setTerminalOutput(prev => [...prev, '', '='.repeat(60), `${modeLabel}: ${taskDisplay}`, '='.repeat(60)])
     setAiMessages(prev => [...prev, useCliAgent
-      ? '🔧 CLI Agent mode: Will use OpenAsst CLI for execution...'
+      ? '🔧 Terminal Agent: Using OpenAsst Agent for execution...'
       : '📋 Layer 1: Stream execution engine starting...'])
 
     let fullExecutionResult: any = null
@@ -1313,11 +1313,11 @@ export default function ServerDetailPage() {
                 onChange={(e) => setUseCliAgent(e.target.checked)}
                 className="w-4 h-4 accent-green-500"
               />
-              <span className="text-green-400 font-mono text-sm">Use CLI Agent</span>
+              <span className="text-green-400 font-mono text-sm">OpenAsst Terminal Agent</span>
             </label>
             {useCliAgent && (
               <span className="text-xs text-gray-500 font-mono">
-                (Commands via OpenAsst CLI)
+                (Execute via OpenAsst Agent)
               </span>
             )}
           </div>

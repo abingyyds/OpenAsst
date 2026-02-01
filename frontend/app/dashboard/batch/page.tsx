@@ -144,7 +144,7 @@ export default function BatchExecutePage() {
       const exec = newMap.get(serverId)
       if (exec) {
         exec.status = 'running'
-        exec.currentStep = useCliAgent ? 'CLI Agent starting...' : 'Connecting to server...'
+        exec.currentStep = useCliAgent ? 'Terminal Agent starting...' : 'Connecting to server...'
       }
       return newMap
     })
@@ -370,11 +370,11 @@ export default function BatchExecutePage() {
               className="w-4 h-4 accent-green-500"
               disabled={executing}
             />
-            <span className="text-green-400 font-mono text-sm">Use CLI Agent</span>
+            <span className="text-green-400 font-mono text-sm">OpenAsst Terminal Agent</span>
           </label>
           {useCliAgent && (
             <span className="text-xs text-gray-500 font-mono">
-              (Will install & use OpenAsst CLI on each server)
+              (Install & use OpenAsst Agent on each server)
             </span>
           )}
         </div>
