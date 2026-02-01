@@ -31,6 +31,21 @@ export const chatApi = {
     }
   },
 
+  async getSession(serverId: string): Promise<{ messages: ChatMessage[], commandHistory: any[] }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sessions/${serverId}`)
+      if (!response.ok) throw new Error('获取会话历史失败')
+      const session = await response.json()
+      return {
+        messages: session.messages || [],
+        commandHistory: session.commandHistory || []
+      }
+    } catch (error) {
+      console.error('Failed to load session:', error)
+      return { messages: [], commandHistory: [] }
+    }
+  },
+
   async clearMessages(serverId: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/api/sessions/${serverId}`, {
       method: 'DELETE'

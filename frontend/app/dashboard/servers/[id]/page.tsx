@@ -101,12 +101,21 @@ export default function ServerDetailPage() {
 
   const loadServerData = async () => {
     try {
-      const [serverData, messages] = await Promise.all([
+      const [serverData, session] = await Promise.all([
         serverApi.getById(id),
-        chatApi.getMessages(id)
+        chatApi.getSession(id)
       ])
       setServer(serverData)
-      setChatMessages(messages)
+      setChatMessages(session.messages)
+
+      // 从后端加载命令历史到终端输出
+      if (session.commandHistory && session.commandHistory.length > 0) {
+        const historyOutput = session.commandHistory.map((log: any) => {
+          const timestamp = log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : ''
+          return `[${timestamp}] $ ${log.command}\n${log.output || ''}`
+        })
+        setTerminalOutput(historyOutput)
+      }
 
       // 如果是本地连接类型，连接本地代理
       if (serverData?.connectionType === 'local') {
