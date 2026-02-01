@@ -99,9 +99,16 @@ async function getServerById(serverId: string, userId?: string): Promise<ServerC
 }
 
 // Helper function to get statistics from database
-async function getStatistics(): Promise<Statistics> {
+async function getStatistics(userId?: string): Promise<Statistics> {
+  let serversQuery = supabase.from('servers').select('id', { count: 'exact' });
+
+  // 如果提供了userId，只统计该用户的服务器
+  if (userId) {
+    serversQuery = serversQuery.eq('user_id', userId);
+  }
+
   const [serversResult, scriptsResult] = await Promise.all([
-    supabase.from('servers').select('id', { count: 'exact' }),
+    serversQuery,
     supabase.from('script_templates').select('id', { count: 'exact' })
   ]);
 
@@ -687,7 +694,8 @@ app.get('/api/models', (req, res) => {
 // Statistics endpoint
 app.get('/api/statistics', async (req, res) => {
   try {
-    const stats = await getStatistics();
+    const userId = req.headers['x-user-id'] as string;
+    const stats = await getStatistics(userId);
     res.json(stats);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });

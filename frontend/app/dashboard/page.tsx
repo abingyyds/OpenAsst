@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { scriptApi } from '@/lib/api/scripts'
+import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
@@ -32,7 +33,14 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const statsResponse = await fetch(`${API_BASE_URL}/api/statistics`)
+        // 获取当前用户ID
+        const { data: { user } } = await supabase.auth.getUser()
+        const userId = user?.id
+
+        const headers: Record<string, string> = {}
+        if (userId) headers['X-User-Id'] = userId
+
+        const statsResponse = await fetch(`${API_BASE_URL}/api/statistics`, { headers })
         if (statsResponse.ok) {
           const statsData = await statsResponse.json()
           setStats(statsData)
