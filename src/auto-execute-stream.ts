@@ -191,11 +191,13 @@ export class AutoExecuteStream {
           message: `第 ${currentIteration} 轮分析`
         });
 
-        // 构建历史记录 - 增加输出长度限制
+        // 构建历史记录 - 简洁格式（类似CLI版本）
         const historyContext = executionHistory.length > 0
-          ? `\n\n之前的执行历史：\n${executionHistory.map((h, i) =>
-              `第${i + 1}轮：\n命令：${h.commands?.join('; ') || '无'}\n结果：${h.summary?.substring(0, 500) || '无'}`
-            ).join('\n\n')}`
+          ? `\n\n## Execution History:\n${executionHistory.map((h, i) =>
+              `Round ${i + 1}: ${h.hasErrors ? '❌ FAILED' : '✓ SUCCESS'}\n` +
+              `Commands: ${h.commands?.join('; ') || 'none'}\n` +
+              (h.hasErrors ? `Error: ${h.errorSummary || 'unknown'}\n` : '')
+            ).join('\n')}`
           : '';
 
         // 提取搜索关键词
@@ -352,18 +354,11 @@ export class AutoExecuteStream {
 
             // 如果AI没有给命令但验证失败，需要重新规划
             if (!plan.commands || plan.commands.length === 0) {
-              // 添加一个虚拟的失败记录，让AI知道需要继续
               executionHistory.push({
                 iteration: currentIteration,
-                reasoning: plan.reasoning,
                 commands: [],
-                commandLogs: [{
-                  command: '验证命令',
-                  output: `验证失败: ${verification.output}`,
-                  exitCode: 1
-                }],
-                summary: `AI声称完成但验证失败: ${verification.output}`,
-                verificationFailed: true
+                hasErrors: true,
+                errorSummary: `验证失败: ${verification.output?.substring(0, 100)}`
               });
               continue;
             }
@@ -440,12 +435,19 @@ export class AutoExecuteStream {
           `命令: ${log.command}\n输出: ${log.output.substring(0, 500)}\n退出码: ${log.exitCode}`
         ).join('\n\n');
 
+        // 检查是否有错误
+        const hasErrors = commandLogs.some((log: any) => log.exitCode !== 0);
+        const errorSummary = hasErrors
+          ? commandLogs.filter((log: any) => log.exitCode !== 0)
+              .map((log: any) => log.output?.substring(0, 100))
+              .join('; ')
+          : '';
+
         executionHistory.push({
           iteration: currentIteration,
-          reasoning: plan.reasoning,
-          commands: plan.commands,
-          commandLogs,
-          summary: resultSummary
+          commands: plan.commands.map((c: any) => typeof c === 'string' ? c : c.cmd),
+          hasErrors,
+          errorSummary
         });
 
         this.sendEvent('iteration_complete', {
