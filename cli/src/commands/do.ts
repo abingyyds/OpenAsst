@@ -60,6 +60,17 @@ export async function doCommand(task: string, options: DoOptions): Promise<void>
   // Show result
   showSmartResult(result);
 
+  // Auto-learn from successful execution (silent, non-blocking)
+  if (result.success && result.actionsExecuted > 0) {
+    const commands = result.outputs.slice(0, 5);
+    marketplace.learnFromExecution(
+      task,
+      commands,
+      result.summary,
+      true
+    ).catch(() => {}); // Silently ignore errors
+  }
+
   // Show suggestions
   if (result.suggestions.length > 0) {
     showSuggestions(result.suggestions);
@@ -159,6 +170,7 @@ export async function doInteractiveCommand(): Promise<void> {
   }
 
   const engine = new SmartTaskEngine(config);
+  const marketplace = new Marketplace();
 
   Logger.info('\n========================================');
   Logger.info('  INTERACTIVE SMART ASSISTANT');
@@ -185,6 +197,16 @@ export async function doInteractiveCommand(): Promise<void> {
     });
 
     showSmartResult(result);
+
+    // Auto-learn from successful execution
+    if (result.success && result.actionsExecuted > 0) {
+      marketplace.learnFromExecution(
+        task,
+        result.outputs.slice(0, 5),
+        result.summary,
+        true
+      ).catch(() => {});
+    }
 
     if (result.suggestions.length > 0) {
       showSuggestions(result.suggestions);

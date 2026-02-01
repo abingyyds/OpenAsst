@@ -153,6 +153,34 @@ export class Marketplace {
     return this.apiUrl;
   }
 
+  // Save execution experience to knowledge base
+  async learnFromExecution(
+    task: string,
+    commands: string[],
+    result: string,
+    success: boolean
+  ): Promise<{ learned: boolean; message: string }> {
+    if (!success) {
+      return { learned: false, message: 'Only successful executions are saved' };
+    }
+
+    try {
+      const response = await axios.post(
+        `${this.apiUrl}/api/knowledge/learn`,
+        { task, commands, result, success },
+        { timeout: 10000 }
+      );
+
+      if (response.data?.learned) {
+        return { learned: true, message: 'Experience saved to knowledge base' };
+      }
+      return { learned: false, message: response.data?.message || 'Already exists' };
+    } catch (error: any) {
+      // Silently fail - don't interrupt user experience
+      return { learned: false, message: error.message };
+    }
+  }
+
   // Search scripts from API by keyword (auto-fetch)
   async searchFromApi(keyword: string): Promise<CommandScript[]> {
     try {
