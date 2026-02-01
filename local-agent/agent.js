@@ -161,24 +161,29 @@ function executeCommand(command, id, socket) {
 
   const isWindows = os.platform() === 'win32';
   const shell = isWindows ? 'cmd.exe' : '/bin/bash';
-  const shellArgs = isWindows ? ['/c', command] : ['-c', command];
+  // Windows: 先切换到 UTF-8 编码再执行命令
+  const shellArgs = isWindows
+    ? ['/c', 'chcp 65001 >nul && ' + command]
+    : ['-c', command];
 
   const child = spawn(shell, shellArgs, {
     cwd: os.homedir(),
-    env: process.env
+    env: { ...process.env, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8' }
   });
 
   let stdout = '';
   let stderr = '';
 
   child.stdout.on('data', (data) => {
-    stdout += data.toString();
-    sendMessage(socket, { type: 'stdout', id, data: data.toString() });
+    const text = data.toString('utf8');
+    stdout += text;
+    sendMessage(socket, { type: 'stdout', id, data: text });
   });
 
   child.stderr.on('data', (data) => {
-    stderr += data.toString();
-    sendMessage(socket, { type: 'stderr', id, data: data.toString() });
+    const text = data.toString('utf8');
+    stderr += text;
+    sendMessage(socket, { type: 'stderr', id, data: text });
   });
 
   child.on('close', (code) => {
