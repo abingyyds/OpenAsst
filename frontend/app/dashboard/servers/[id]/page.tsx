@@ -280,8 +280,12 @@ export default function ServerDetailPage() {
           output: agentResult.stdout || agentResult.stderr || '',
           exitCode: agentResult.code
         }
+      } else if (server?.connectionType === 'local') {
+        // local 类型但 agent 未连接，报错而不是发送到后端
+        setTerminalOutput([...terminalOutput, `$ ${cmd}`, '❌ Local Agent 未连接。请先启动 Local Agent：~/.openasst/start.sh'])
+        return
       } else {
-        // 使用后端执行
+        // 使用后端执行（仅限非 local 类型）
         result = await commandApi.execute(id, cmd)
       }
 
