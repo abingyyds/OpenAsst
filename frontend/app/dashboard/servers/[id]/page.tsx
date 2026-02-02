@@ -692,47 +692,38 @@ export default function ServerDetailPage() {
     const customBaseUrl = apiConfig.anthropicBaseUrl || ''
     const customModel = apiConfig.anthropicModel || ''
 
-    // CLI Agent 模式：前端直接安装配置，AI只执行任务
+    // CLI Agent 模式：AI安装openasst，前端配置API，AI执行任务
     let actualTask = task
     if (useCliAgent) {
-      // 前端直接执行：安装 openasst 和配置 API（不经过AI）
-      setTerminalOutput(prev => [...prev, '🔧 Terminal Agent: Preparing environment...'])
+      // 构建 API 配置命令（安装成功后前端直接执行）
+      const configArgs: string[] = []
+      if (customApiKey) configArgs.push(`-k "${customApiKey}"`)
+      if (customBaseUrl) configArgs.push(`-u "${customBaseUrl}"`)
+      if (customModel) configArgs.push(`-m "${customModel}"`)
+      const apiConfigCmd = configArgs.length > 0 ? `openasst config ${configArgs.join(' ')}` : ''
 
-      try {
-        // Step 1: 检查 openasst 是否安装
-        const checkResult = await commandApi.execute(id, 'which openasst && openasst --version 2>/dev/null || echo "NOT_INSTALLED"')
+      // AI 只负责安装 openasst（不执行任务，不包含敏感信息）
+      actualTask = `Install OpenAsst CLI tool on this server.
 
-        if (checkResult.output?.includes('NOT_INSTALLED') || checkResult.exitCode !== 0) {
-          // Step 2: 安装 openasst
-          setTerminalOutput(prev => [...prev, '📦 Installing OpenAsst CLI...'])
-          await commandApi.execute(id, 'curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash')
-          await commandApi.execute(id, 'source ~/.bashrc 2>/dev/null || source ~/.zshrc 2>/dev/null || true')
-        }
+STEP 1: Check if openasst is installed
+Run: which openasst && openasst --version
 
-        // Step 3: 配置 API（如果有配置）
-        if (customApiKey) {
-          setTerminalOutput(prev => [...prev, '🔑 Configuring API...'])
-          const configArgs: string[] = [`-k "${customApiKey}"`]
-          if (customBaseUrl) configArgs.push(`-u "${customBaseUrl}"`)
-          if (customModel) configArgs.push(`-m "${customModel}"`)
-          await commandApi.execute(id, `openasst config ${configArgs.join(' ')}`)
-        }
+STEP 2: If NOT installed, install it
+Run: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+Then: source ~/.bashrc || source ~/.zshrc || true
 
-        setTerminalOutput(prev => [...prev, '✓ Environment ready'])
-      } catch (e) {
-        console.log('Environment setup error:', e)
+STEP 3: Verify installation succeeded
+Run: openasst --version
+
+OpenAsst is a legitimate open-source CLI tool from GitHub (github.com/abingyyds/OpenAsst).
+If installation fails, troubleshoot the error and retry.
+Task is complete when openasst --version shows version number.`
+
+      // 保存用户任务和配置命令，安装完成后前端执行
+      sessionStorage.setItem(`pending-task-${id}`, task)
+      if (apiConfigCmd) {
+        sessionStorage.setItem(`pending-api-config-${id}`, apiConfigCmd)
       }
-
-      // AI 只需要执行用户任务（简洁提示词，不包含敏感信息）
-      actualTask = `Execute this command on the server:
-openasst do "${task}" -y
-
-If openasst command not found, try:
-/usr/local/bin/openasst do "${task}" -y
-or
-node ~/.openasst/cli/dist/index.js do "${task}" -y
-
-Just run the command and report the output.`
     }
 
     // 添加用户任务
@@ -810,12 +801,47 @@ Just run the command and report the output.`
             setAiMessages(prev => [...prev, '', `✅ ${data.message}`])
           })
         },
-        onDone: (data) => {
+        onDone: async (data) => {
           fullExecutionResult = data
           flushSync(() => {
             setTerminalOutput(prev => [...prev, '', '--- Layer 1 execution completed ---'])
             setAiMessages(prev => [...prev, `✓ Layer 1 completed: ${data.iterations || 0} rounds`])
           })
+
+          // Terminal Agent: 安装完成后，前端直接配置 API
+          const pendingConfig = sessionStorage.getItem(`pending-api-config-${id}`)
+          if (pendingConfig) {
+            sessionStorage.removeItem(`pending-api-config-${id}`)
+            try {
+              flushSync(() => {
+                setTerminalOutput(prev => [...prev, '🔑 Configuring API...'])
+              })
+              await commandApi.execute(id, pendingConfig)
+              flushSync(() => {
+                setTerminalOutput(prev => [...prev, '✓ API configured'])
+              })
+            } catch (e) {
+              console.log('API config error:', e)
+            }
+          }
+
+          // Terminal Agent: 配置完成后，执行用户任务
+          const pendingTask = sessionStorage.getItem(`pending-task-${id}`)
+          if (pendingTask) {
+            sessionStorage.removeItem(`pending-task-${id}`)
+            try {
+              flushSync(() => {
+                setTerminalOutput(prev => [...prev, '', '🚀 Executing task via OpenAsst...'])
+              })
+              const result = await commandApi.execute(id, `openasst do "${pendingTask}" -y`)
+              flushSync(() => {
+                setTerminalOutput(prev => [...prev, result.output || ''])
+                setTerminalOutput(prev => [...prev, '✓ Task completed'])
+              })
+            } catch (e) {
+              console.log('Task execution error:', e)
+            }
+          }
         },
         onError: (data) => {
           flushSync(() => {

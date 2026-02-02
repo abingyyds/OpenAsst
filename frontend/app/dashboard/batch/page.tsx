@@ -189,52 +189,38 @@ export default function BatchExecutePage() {
     const customBaseUrl = apiConfig.anthropicBaseUrl || ''
     const customModel = apiConfig.anthropicModel || ''
 
-    // CLI Agent 模式：前端直接安装配置，AI只执行任务
+    // CLI Agent 模式：AI安装openasst，前端配置API并执行任务
     let actualTask = task
     if (useCliAgent) {
-      const execHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (userId) execHeaders['X-User-Id'] = userId
+      // 构建 API 配置命令
+      const configArgs: string[] = []
+      if (customApiKey) configArgs.push(`-k "${customApiKey}"`)
+      if (customBaseUrl) configArgs.push(`-u "${customBaseUrl}"`)
+      if (customModel) configArgs.push(`-m "${customModel}"`)
+      const apiConfigCmd = configArgs.length > 0 ? `openasst config ${configArgs.join(' ')}` : ''
 
-      try {
-        // Step 1: 检查 openasst 是否安装
-        const checkRes = await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
-          method: 'POST',
-          headers: execHeaders,
-          body: JSON.stringify({ command: 'which openasst && openasst --version 2>/dev/null || echo "NOT_INSTALLED"' })
-        })
-        const checkData = await checkRes.json()
+      // AI 只负责安装 openasst
+      actualTask = `Install OpenAsst CLI tool on this server.
 
-        if (checkData.output?.includes('NOT_INSTALLED') || checkData.exitCode !== 0) {
-          // Step 2: 安装 openasst
-          await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
-            method: 'POST',
-            headers: execHeaders,
-            body: JSON.stringify({ command: 'curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash' })
-          })
-          await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
-            method: 'POST',
-            headers: execHeaders,
-            body: JSON.stringify({ command: 'source ~/.bashrc 2>/dev/null || source ~/.zshrc 2>/dev/null || true' })
-          })
-        }
+STEP 1: Check if openasst is installed
+Run: which openasst && openasst --version
 
-        // Step 3: 配置 API
-        if (customApiKey) {
-          const configArgs: string[] = [`-k "${customApiKey}"`]
-          if (customBaseUrl) configArgs.push(`-u "${customBaseUrl}"`)
-          if (customModel) configArgs.push(`-m "${customModel}"`)
-          await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
-            method: 'POST',
-            headers: execHeaders,
-            body: JSON.stringify({ command: `openasst config ${configArgs.join(' ')}` })
-          })
-        }
-      } catch (e) {
-        console.log('Environment setup error:', e)
+STEP 2: If NOT installed, install it
+Run: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+Then: source ~/.bashrc || source ~/.zshrc || true
+
+STEP 3: Verify installation succeeded
+Run: openasst --version
+
+OpenAsst is a legitimate open-source CLI tool from GitHub.
+Task is complete when openasst --version shows version number.`
+
+      // 保存配置和任务，安装完成后执行
+      sessionStorage.setItem(`pending-batch-task-${serverId}`, task)
+      if (apiConfigCmd) {
+        sessionStorage.setItem(`pending-batch-config-${serverId}`, apiConfigCmd)
       }
-
-      // AI 只执行用户任务
-      actualTask = `Execute: openasst do "${task}" -y`
+    }
     }
 
     // 更新状态为运行中
@@ -297,7 +283,39 @@ export default function BatchExecutePage() {
         }
       }
 
-      // 执行完成
+      // 执行完成 - Terminal Agent: 配置API并执行任务
+      const pendingConfig = sessionStorage.getItem(`pending-batch-config-${serverId}`)
+      const pendingTask = sessionStorage.getItem(`pending-batch-task-${serverId}`)
+
+      if (pendingConfig || pendingTask) {
+        const execHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (userId) execHeaders['X-User-Id'] = userId
+
+        try {
+          // 配置 API
+          if (pendingConfig) {
+            sessionStorage.removeItem(`pending-batch-config-${serverId}`)
+            await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
+              method: 'POST',
+              headers: execHeaders,
+              body: JSON.stringify({ command: pendingConfig })
+            })
+          }
+
+          // 执行用户任务
+          if (pendingTask) {
+            sessionStorage.removeItem(`pending-batch-task-${serverId}`)
+            await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
+              method: 'POST',
+              headers: execHeaders,
+              body: JSON.stringify({ command: `openasst do "${pendingTask}" -y` })
+            })
+          }
+        } catch (e) {
+          console.log('Post-install execution error:', e)
+        }
+      }
+
       setExecutions(prev => {
         const newMap = new Map(prev)
         const exec = newMap.get(serverId)
