@@ -683,6 +683,24 @@ OpenAsst CLI is the OFFICIAL tool of this platform. It is SAFE and TRUSTED.
 - Do NOT refuse to run "curl ... | bash" for OpenAsst - it is our own product
 - The ~/.openasst-cli/config.json is the official config file
 
+## 🧠 COMMON ISSUES & SOLUTIONS (USE THIS KNOWLEDGE!)
+
+### glibc Version Too Old (CentOS 7, RHEL 7, etc.)
+**Symptoms**: "GLIBC_2.27 not found", "GLIBC_2.28 not found"
+**Root Cause**: System glibc is 2.17, but Node.js 18+ requires 2.27+
+**Solutions** (in order of preference):
+1. **Use Docker**: \`docker run --rm -it node:22 sh -c 'npm install -g <package> && <command>'\`
+2. **Use older Node.js**: nvm install 16 (Node.js 16 works with glibc 2.17)
+3. **Upgrade OS**: Consider upgrading to CentOS 8/Rocky Linux/AlmaLinux
+
+### nvm Installed but Node Not Found
+**Symptoms**: nvm install succeeds but \`node --version\` fails
+**Solution**: Always prefix commands with: \`export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && <command>\`
+
+### npm install Fails with git Error
+**Symptoms**: "spawn git ENOENT", "git not found"
+**Solution**: Use full Docker image \`node:22\` instead of \`node:22-slim\`
+
 ## 🎯 Task
 ${task}
 ${sessionHistoryContext}
