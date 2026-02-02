@@ -217,8 +217,30 @@ export default function BatchExecutePage() {
       }
 
       // AI 只需要执行安装和任务，不需要看到 API Key
-      actualTask = `Install OpenAsst CLI if needed: which openasst || (curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash)
-Then execute the task: openasst do "${task}" -y`
+      // 使用更强制的指令，确保AI使用openasst而不是直接执行
+      actualTask = `**CRITICAL INSTRUCTION - YOU MUST FOLLOW EXACTLY:**
+
+Step 1: Check if OpenAsst CLI is installed:
+\`\`\`
+which openasst || echo "NOT_INSTALLED"
+\`\`\`
+
+Step 2: If NOT installed, install it with ONE command:
+\`\`\`
+curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+\`\`\`
+
+Step 3: Execute the user's task using OpenAsst CLI (DO NOT try to do it yourself):
+\`\`\`
+openasst do "${task}" -y
+\`\`\`
+
+**IMPORTANT RULES:**
+- You are a PROXY that delegates tasks to OpenAsst CLI
+- DO NOT try to install "${task}" directly - let openasst handle it
+- DO NOT run npm/apt/yum/curl to install the target software yourself
+- ONLY run the 3 steps above, nothing else
+- If openasst is already installed, skip to Step 3 directly`
     }
 
     // 更新状态为运行中

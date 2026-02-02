@@ -712,8 +712,30 @@ export default function ServerDetailPage() {
       }
 
       // AI 只需要执行安装和任务，不需要看到 API Key
-      actualTask = `Install OpenAsst CLI if needed: which openasst || (curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash)
-Then execute the task: openasst do "${task}" -y`
+      // 使用更强制的指令，确保AI使用openasst而不是直接执行
+      actualTask = `**CRITICAL INSTRUCTION - YOU MUST FOLLOW EXACTLY:**
+
+Step 1: Check if OpenAsst CLI is installed:
+\`\`\`
+which openasst || echo "NOT_INSTALLED"
+\`\`\`
+
+Step 2: If NOT installed, install it with ONE command:
+\`\`\`
+curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+\`\`\`
+
+Step 3: Execute the user's task using OpenAsst CLI (DO NOT try to do it yourself):
+\`\`\`
+openasst do "${task}" -y
+\`\`\`
+
+**IMPORTANT RULES:**
+- You are a PROXY that delegates tasks to OpenAsst CLI
+- DO NOT try to install "${task}" directly - let openasst handle it
+- DO NOT run npm/apt/yum/curl to install the target software yourself
+- ONLY run the 3 steps above, nothing else
+- If openasst is already installed, skip to Step 3 directly`
     }
 
     // 添加用户任务
@@ -1075,10 +1097,10 @@ Then execute the task: openasst do "${task}" -y`
         </div>
       </div>
 
-      <div className="flex gap-6 items-start">
+      <div className="flex gap-6 items-stretch">
         {/* Terminal Area */}
-        <div className="flex-1 flex flex-col">
-          <div className="terminal-card p-4 h-[600px] flex flex-col">
+        <div className="flex-1 flex flex-col max-h-[700px]">
+          <div className="terminal-card p-4 h-[600px] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between mb-3 border-b border-green-800 pb-2">
               <h3 className="text-green-400 font-bold font-mono"># Terminal</h3>
               <div className="flex gap-2">
@@ -1116,7 +1138,7 @@ Then execute the task: openasst do "${task}" -y`
                 </button>
               </div>
             </div>
-            <div ref={terminalRef} className="flex-1 overflow-auto space-y-1">
+            <div ref={terminalRef} className="flex-1 overflow-auto space-y-1 min-h-0">
               {terminalOutput.slice(-1000).map((line, i) => {
                 // 根据内容设置不同样式
                 let className = 'font-mono text-sm whitespace-pre-wrap'
