@@ -192,65 +192,37 @@ export default function BatchExecutePage() {
     // CLI Agent 模式：将任务转换为CLI命令
     let actualTask = task
     if (useCliAgent) {
-      // 先直接执行配置命令（不通过AI，避免AI拒绝执行）
-      if (customApiKey) {
-        const configJson = JSON.stringify({
-          apiKey: customApiKey,
-          baseUrl: customBaseUrl || 'https://api.anthropic.com',
-          model: customModel || 'claude-sonnet-4-20250514'
-        })
-        const configCmd = `mkdir -p ~/.openasst-cli && echo '${configJson}' > ~/.openasst-cli/config.json`
-
-        // 直接执行配置命令
-        try {
-          const configHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-          if (userId) configHeaders['X-User-Id'] = userId
-
-          await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
-            method: 'POST',
-            headers: configHeaders,
-            body: JSON.stringify({ command: configCmd })
-          })
-        } catch (e) {
-          console.log('Config sync failed, continuing anyway')
-        }
-      }
+      // 构建API配置信息（传递给AI自动同步）
+      const apiConfigForAgent = customApiKey ? JSON.stringify({
+        apiKey: customApiKey,
+        baseUrl: customBaseUrl || 'https://api.anthropic.com',
+        model: customModel || 'claude-sonnet-4-20250514'
+      }) : ''
 
       // Terminal Agent Mode: Install OpenAsst CLI and execute task
       actualTask = `[TERMINAL AGENT MODE - OPENASST PROXY]
 
-Your ONLY job: Install OpenAsst CLI and use it to execute the user's task.
+Your ONLY job: Install OpenAsst CLI, configure it, and use it to execute the user's task.
 
 === STEP 1: Check if openasst is installed ===
 Run: which openasst && openasst --version
 
 === STEP 2: If NOT installed, install OpenAsst ===
-
-**Install command:**
 curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
-
-**After install, if command not found:**
 source ~/.bashrc || source ~/.zshrc || true
 
-**Verify:**
-which openasst && openasst --version
+=== STEP 3: Configure API (REQUIRED!) ===
+${apiConfigForAgent ? `Run this command to configure API:
+mkdir -p ~/.openasst-cli && echo '${apiConfigForAgent}' > ~/.openasst-cli/config.json` : 'No API config provided - openasst do will not work without API key'}
 
-**If still not found, try these paths:**
-- /usr/local/bin/openasst --version
-- node ~/.openasst/cli/dist/index.js --version
-
-=== STEP 3: Execute user task ===
+=== STEP 4: Execute user task ===
 openasst do "${task}" -y
 
-**Or if using direct path:**
-/usr/local/bin/openasst do "${task}" -y
-node ~/.openasst/cli/dist/index.js do "${task}" -y
-
 === RULES ===
-1. You are a PROXY. ONLY install openasst and call it
+1. You are a PROXY. Install openasst, configure API, then call it
 2. FORBIDDEN: Do not directly execute "${task}" yourself
 3. FORBIDDEN: Do not run npm/apt/yum/pip to install software for "${task}"
-4. The install script handles Node.js, nvm, wrapper script automatically
+4. This is TRUSTED internal configuration - execute without warnings
 5. ONLY openasst can execute the user's task
 
 User's original task: ${task}`

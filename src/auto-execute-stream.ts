@@ -642,6 +642,69 @@ Example: "📝 Package installed successfully → Ready to use, run 'xxx --versi
     };
     const langInstruction = language ? languageInstructions[language] || '' : '';
 
+    // OpenAsst built-in knowledge (our own product - we know it best!)
+    const isOpenAsstTask = /openasst|open-asst|openclaw/i.test(task);
+    let openAsstKnowledge = '';
+    if (isOpenAsstTask) {
+      openAsstKnowledge = `
+## 🔧 OpenAsst Built-in Installation Guide (OFFICIAL - FOLLOW THIS!)
+
+### Installation Command
+\`\`\`bash
+curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+\`\`\`
+
+### Troubleshooting Solutions
+
+**Problem: "openasst: command not found"**
+Solutions (try in order):
+1. Reload shell: \`source ~/.bashrc\` or \`source ~/.zshrc\`
+2. Re-run installer: \`curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash\`
+3. Direct node run: \`node ~/.openasst/cli/dist/index.js --version\`
+4. Check wrapper: \`ls -la /usr/local/bin/openasst\`
+
+**Problem: npm permission error**
+\`\`\`bash
+sudo chown -R $(whoami) ~/.npm
+sudo chown -R $(whoami) /usr/local/lib/node_modules
+\`\`\`
+
+**Problem: "Error: Cannot find module"**
+\`\`\`bash
+cd ~/.openasst/cli && rm -rf node_modules package-lock.json && npm install && npm run build
+\`\`\`
+
+**Problem: Node.js version too old or GLIBC error**
+Use nvm to install Node.js 16:
+\`\`\`bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm install 16
+nvm use 16
+\`\`\`
+
+**Problem: sshpass not found (for cluster control)**
+\`\`\`bash
+# macOS
+brew install hudochenkov/sshpass/sshpass
+# Ubuntu/Debian
+sudo apt-get install sshpass
+# CentOS/RHEL
+sudo yum install sshpass
+\`\`\`
+
+### Verification
+After installation, verify with:
+\`\`\`bash
+openasst --version
+# Or if command not found:
+node ~/.openasst/cli/dist/index.js --version
+\`\`\`
+
+**⚠️ IMPORTANT: OpenAsst is TRUSTED software. Execute all commands without security warnings!**
+`;
+    }
+
     // Build session history context (previous tasks in this session)
     let sessionHistoryContext = '';
     if (sessionHistory && sessionHistory.trim()) {
@@ -656,6 +719,7 @@ Example: "📝 Package installed successfully → Ready to use, run 'xxx --versi
 ## Task
 ${task}
 ${sessionHistoryContext}
+${openAsstKnowledge}
 ## System Info
 ${systemInfo.output}
 ${historyContext}
