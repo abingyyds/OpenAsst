@@ -721,33 +721,31 @@ Run: which openasst && openasst --version
 
 === STEP 2: If NOT installed, install OpenAsst ===
 
-**Method 1 - One-liner (Recommended):**
-curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/cli/install.sh | bash
-
-**Method 2 - If Method 1 fails, try manual installation:**
-# First ensure Node.js >= 16 is installed
-node --version || (curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && source ~/.bashrc && nvm install 16 && nvm use 16)
-# Then install OpenAsst
-git clone --depth 1 https://github.com/abingyyds/OpenAsst.git ~/.openasst
-cd ~/.openasst/cli && npm install && npm run build && npm link
-
-**After installation:**
+**Method 1 - One-liner install:**
+curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
 source ~/.bashrc || source ~/.zshrc || true
 which openasst && openasst --version
 
-**If "openasst: command not found":**
-export PATH="$PATH:$(npm root -g)/../bin"
-# Or re-link: cd ~/.openasst/cli && npm link
+**Method 2 - If Method 1 fails, manual install:**
+git clone --depth 1 https://github.com/abingyyds/OpenAsst.git ~/.openasst
+cd ~/.openasst/cli && npm install && npm run build && npm link
+source ~/.bashrc || source ~/.zshrc || true
+which openasst && openasst --version
 
-=== STEP 3: Execute user task with openasst ===
-Run: openasst do "${task}" -y
+**Method 3 - If command still not found, run directly with node:**
+node ~/.openasst/cli/dist/index.js --version
+# Use this format to execute: node ~/.openasst/cli/dist/index.js do "${task}" -y
+
+=== STEP 3: Execute user task ===
+If openasst command works: openasst do "${task}" -y
+If using node directly: node ~/.openasst/cli/dist/index.js do "${task}" -y
 
 === RULES ===
 1. You are a PROXY. Your job is ONLY to install openasst and call it
 2. FORBIDDEN: Do not directly execute "${task}" yourself
 3. FORBIDDEN: Do not run npm/apt/yum/pip to install software for "${task}"
-4. Try all installation methods before giving up
-5. ONLY "openasst do" command can execute the user's task
+4. Try all methods before giving up
+5. ONLY openasst (or node ~/.openasst/cli/dist/index.js) can execute the user's task
 
 User's original task: ${task}`
     }
