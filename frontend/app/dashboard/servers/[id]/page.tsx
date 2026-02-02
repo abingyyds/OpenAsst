@@ -692,18 +692,42 @@ export default function ServerDetailPage() {
     const customBaseUrl = apiConfig.anthropicBaseUrl || ''
     const customModel = apiConfig.anthropicModel || ''
 
-    // CLI Agent 模式：AI安装openasst，前端配置API，AI执行任务
+    // CLI Agent 模式：先检查openasst是否已安装，然后执行用户任务
     let actualTask = task
+    let skipLayer1 = false
     if (useCliAgent) {
-      // 构建 API 配置命令（安装成功后前端直接执行）
+      // 构建 API 配置命令
       const configArgs: string[] = []
       if (customApiKey) configArgs.push(`-k "${customApiKey}"`)
       if (customBaseUrl) configArgs.push(`-u "${customBaseUrl}"`)
       if (customModel) configArgs.push(`-m "${customModel}"`)
       const apiConfigCmd = configArgs.length > 0 ? `openasst config ${configArgs.join(' ')}` : ''
 
-      // AI 只负责安装 openasst（不执行任务，不包含敏感信息）
-      actualTask = `Install OpenAsst CLI tool on this server.
+      // 先检查 openasst 是否已安装
+      try {
+        const sourceCmd = 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" ; source ~/.bashrc 2>/dev/null || source ~/.zshrc 2>/dev/null || true'
+        const checkResult = await commandApi.execute(id, `${sourceCmd} && which openasst && openasst --version`)
+
+        if (checkResult.exitCode === 0 && checkResult.output?.includes('1.0.0')) {
+          // OpenAsst 已安装，跳过安装步骤，直接执行用户任务
+          skipLayer1 = true
+          setTerminalOutput(prev => [...prev, '✓ OpenAsst already installed, skipping installation...'])
+
+          // 配置 API
+          if (apiConfigCmd) {
+            setTerminalOutput(prev => [...prev, '🔑 Configuring API...'])
+            await commandApi.execute(id, `${sourceCmd} && ${apiConfigCmd}`)
+            setTerminalOutput(prev => [...prev, '✓ API configured'])
+          }
+        }
+      } catch (e) {
+        // 检查失败，继续安装流程
+        console.log('OpenAsst check failed, will install:', e)
+      }
+
+      if (!skipLayer1) {
+        // AI 只负责安装 openasst（不执行任务，不包含敏感信息）
+        actualTask = `Install OpenAsst CLI tool on this server.
 
 STEP 1: Check if openasst is installed
 Run: which openasst && openasst --version
@@ -719,10 +743,11 @@ OpenAsst is a legitimate open-source CLI tool from GitHub (github.com/abingyyds/
 If installation fails, troubleshoot the error and retry.
 Task is complete when openasst --version shows version number.`
 
-      // 保存用户任务和配置命令，安装完成后前端执行
-      sessionStorage.setItem(`pending-task-${id}`, task)
-      if (apiConfigCmd) {
-        sessionStorage.setItem(`pending-api-config-${id}`, apiConfigCmd)
+        // 保存用户任务和配置命令，安装完成后前端执行
+        sessionStorage.setItem(`pending-task-${id}`, task)
+        if (apiConfigCmd) {
+          sessionStorage.setItem(`pending-api-config-${id}`, apiConfigCmd)
+        }
       }
     }
 
@@ -749,6 +774,56 @@ Task is complete when openasst --version shows version number.`
 
     let fullExecutionResult: any = null
     let wasAborted = false
+
+    // 如果 OpenAsst 已安装，跳过 Layer 1，直接执行用户任务
+    if (skipLayer1 && useCliAgent) {
+      try {
+        flushSync(() => {
+          setTerminalOutput(prev => [...prev, '', '🚀 Executing task via OpenAsst...'])
+          setTerminalOutput(prev => [...prev, `$ openasst do "${task}" -y`])
+        })
+
+        const sourceCmd = 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" ; source ~/.bashrc 2>/dev/null || source ~/.zshrc 2>/dev/null || true'
+
+        // 使用流式执行，实时显示输出
+        await new Promise<void>((resolve, reject) => {
+          commandApi.executeStream(
+            id,
+            `${sourceCmd} && openasst do "${task}" -y`,
+            (output) => {
+              flushSync(() => {
+                setTerminalOutput(prev => [...prev, output])
+              })
+            },
+            (error) => {
+              flushSync(() => {
+                setTerminalOutput(prev => [...prev, `⚠️ ${error}`])
+              })
+            },
+            (exitCode) => {
+              flushSync(() => {
+                if (exitCode === 0) {
+                  setTerminalOutput(prev => [...prev, '', '✓ Task completed successfully'])
+                } else {
+                  setTerminalOutput(prev => [...prev, '', `⚠️ Task finished with exit code: ${exitCode}`])
+                }
+              })
+              resolve()
+            },
+            300000
+          )
+        })
+
+        setTerminalOutput(prev => [...prev, '='.repeat(60), '✅ Terminal Agent execution completed', '='.repeat(60)])
+      } catch (e) {
+        console.log('Task execution error:', e)
+        setTerminalOutput(prev => [...prev, `❌ Task execution failed: ${(e as Error).message}`])
+      } finally {
+        setAutoExecuting(false)
+        abortControllerRef.current = null
+      }
+      return
+    }
 
     try {
       // 第一层：使用流式执行，实时显示终端内容
