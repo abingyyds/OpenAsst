@@ -4,17 +4,31 @@ import { Logger } from '../utils/logger';
 import { SmartTaskEngine, SmartTaskResult } from '../core/smart-task-engine';
 import { ResultPresenter, NextStep } from '../core/result-presenter';
 import { Marketplace } from '../core/marketplace';
+import { DeviceManager } from '../core/device-manager';
+import { WSHub } from '../core/ws-hub';
+import chalk from 'chalk';
 
 interface DoOptions {
   yes?: boolean;
   verbose?: boolean;
   dir?: string;
+  // Cluster control options
+  all?: boolean;
+  tags?: string;
+  devices?: string;
+  group?: string;
 }
 
 export async function doCommand(task: string, options: DoOptions): Promise<void> {
   const config = ConfigManager.load();
   if (!config) {
     Logger.error('Please run "openasst config" first to set up API key');
+    return;
+  }
+
+  // Check if cluster control mode
+  if (options.all || options.tags || options.devices || options.group) {
+    await doClusterCommand(task, options);
     return;
   }
 
@@ -214,4 +228,113 @@ export async function doInteractiveCommand(): Promise<void> {
 
     console.log('');
   }
+}
+
+/**
+ * Cluster control mode - execute task on multiple devices using AI
+ */
+async function doClusterCommand(task: string, options: DoOptions): Promise<void> {
+  const config = ConfigManager.load();
+  if (!config) {
+    Logger.error('Please run "openasst config" first');
+    return;
+  }
+
+  const deviceManager = new DeviceManager();
+  const engine = new SmartTaskEngine(config);
+
+  // Determine target devices
+  let targetDevices: any[] = [];
+
+  if (options.all) {
+    targetDevices = deviceManager.listDevices();
+  } else if (options.tags) {
+    const tags = options.tags.split(',').map(t => t.trim());
+    targetDevices = deviceManager.getDevicesByTags(tags);
+  } else if (options.devices) {
+    const ids = options.devices.split(',').map(d => d.trim());
+    targetDevices = deviceManager.getDevicesByIds(ids);
+  } else if (options.group) {
+    targetDevices = deviceManager.getDevicesByGroup(options.group);
+  }
+
+  if (targetDevices.length === 0) {
+    Logger.error('No target devices found');
+    return;
+  }
+
+  Logger.info('\n' + '='.repeat(50));
+  Logger.info('  CLUSTER SMART TASK ENGINE');
+  Logger.info('='.repeat(50));
+  Logger.info(`\n  Task: ${task}`);
+  Logger.info(`  Targets: ${targetDevices.length} device(s)`);
+  Logger.info('='.repeat(50) + '\n');
+
+  // Use AI to generate commands for the task
+  Logger.info('Analyzing task with AI...\n');
+
+  const planResult = await engine.planTask(task);
+
+  if (!planResult.commands || planResult.commands.length === 0) {
+    Logger.error('AI could not generate commands for this task');
+    return;
+  }
+
+  Logger.info('Generated commands:');
+  planResult.commands.forEach((cmd: string, i: number) => {
+    console.log(chalk.cyan(`  ${i + 1}. ${cmd}`));
+  });
+  console.log('');
+
+  // Confirm before execution
+  if (!options.yes) {
+    const { confirm } = await inquirer.prompt([{
+      type: 'confirm',
+      name: 'confirm',
+      message: `Execute on ${targetDevices.length} device(s)?`,
+      default: false
+    }]);
+
+    if (!confirm) {
+      Logger.info('Cancelled');
+      return;
+    }
+  }
+
+  // Execute on all devices
+  const hub = new WSHub();
+
+  if (!hub.isRunning()) {
+    Logger.info('Starting hub...');
+    hub.start();
+    await new Promise(r => setTimeout(r, 1000));
+  }
+
+  const onlineAgents = hub.getOnlineAgents();
+  const onlineNames = onlineAgents.map(a => a.name);
+
+  for (const cmd of planResult.commands) {
+    Logger.info(`\nExecuting: ${cmd}`);
+
+    const activeTargets = targetDevices
+      .filter(d => onlineNames.includes(d.name))
+      .map(d => d.name);
+
+    if (activeTargets.length === 0) {
+      Logger.warning('No online devices, skipping...');
+      continue;
+    }
+
+    const results = await hub.broadcast(cmd, activeTargets, 60000);
+
+    // Show results
+    for (const result of results) {
+      const icon = result.success ? chalk.green('✓') : chalk.red('✗');
+      console.log(`  ${icon} ${result.deviceName}: ${result.output.substring(0, 100).replace(/\n/g, ' ')}`);
+    }
+  }
+
+  Logger.info('\n' + '='.repeat(50));
+  Logger.success('Cluster task completed');
+  Logger.info('='.repeat(50));
 }

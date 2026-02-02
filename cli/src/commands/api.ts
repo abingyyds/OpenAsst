@@ -1,6 +1,7 @@
 import inquirer from 'inquirer';
 import { Logger } from '../utils/logger';
 import { APIProvider } from '../core/api-provider';
+import { ApiSync } from '../core/api-sync';
 
 const apiProvider = new APIProvider();
 
@@ -46,4 +47,26 @@ export async function listToolsCommand(): Promise<void> {
   tools.forEach(tool => {
     console.log(`  - ${tool}`);
   });
+}
+
+interface SyncOptions {
+  all?: boolean;
+  devices?: string;
+}
+
+export async function apiSyncCommand(options: SyncOptions): Promise<void> {
+  const apiSync = new ApiSync();
+
+  if (options.all) {
+    Logger.info('Syncing API config to all devices...\n');
+    const result = await apiSync.syncToAll();
+    Logger.info(`\nSync complete: ${result.success} success, ${result.failed} failed`);
+  } else if (options.devices) {
+    const ids = options.devices.split(',').map(d => d.trim());
+    Logger.info(`Syncing API config to ${ids.length} device(s)...\n`);
+    const result = await apiSync.syncToDevices(ids);
+    Logger.info(`\nSync complete: ${result.success} success, ${result.failed} failed`);
+  } else {
+    Logger.error('Please specify --all or --devices');
+  }
 }

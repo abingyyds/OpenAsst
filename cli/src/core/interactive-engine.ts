@@ -78,13 +78,13 @@ export class InteractiveEngine {
    * Handle user input
    */
   async chat(userInput: string): Promise<string> {
-    // 添加到历史
+    // Add to history
     this.context.history.push({ role: 'user', content: userInput });
 
-    // 构建提示
+    // Build prompt
     const prompt = this.buildPrompt(userInput);
 
-    // 调用 AI
+    // Call AI
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: 4096,
@@ -96,10 +96,10 @@ export class InteractiveEngine {
       throw new Error('AI response format error');
     }
 
-    // 解析并执行动作
+    // Parse and execute actions
     const result = await this.parseAndExecute(content.text);
 
-    // 添加到历史
+    // Add to history
     this.context.history.push({
       role: 'assistant',
       content: result.response,
@@ -197,13 +197,13 @@ Important rules:
       const parsed = JSON.parse(jsonMatch[0]);
       response = parsed.response || text;
 
-      // 执行动作
+      // Execute actions
       for (const action of parsed.actions || []) {
         const result = await this.executeAction(action);
         actions.push(result);
       }
     } catch (e) {
-      // 解析失败，返回原文
+      // Parse failed, return original text
     }
 
     return { response, actions };
@@ -220,7 +220,7 @@ Important rules:
       default:
         return {
           type: 'info',
-          description: action.description || '未知操作',
+          description: action.description || 'Unknown operation',
           success: false
         };
     }

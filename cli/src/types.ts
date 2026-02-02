@@ -103,3 +103,108 @@ export interface ErrorSolution {
   confidence: number;
   alternativeSolutions?: string[][];
 }
+
+// ============================================
+// Cluster Control related types
+// ============================================
+
+// Device configuration
+export interface DeviceConfig {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  username: string;
+  authType: 'password' | 'privateKey';
+  password?: string;
+  privateKeyPath?: string;
+  tags: string[];
+  group?: string;
+  description?: string;
+  createdAt?: Date;
+}
+
+// Device runtime status
+export interface DeviceStatus {
+  id: string;
+  online: boolean;
+  lastSeen?: Date;
+  agentVersion?: string;
+  systemInfo?: string;
+  cpuUsage?: number;
+  memoryUsage?: number;
+}
+
+// Device group
+export interface DeviceGroup {
+  name: string;
+  description?: string;
+  devices: string[];  // device ids
+}
+
+// Cluster master configuration
+export interface ClusterConfig {
+  masterPort: number;
+  secretKey: string;
+  devices: DeviceConfig[];
+  groups: DeviceGroup[];
+}
+
+// Batch execute request
+export interface BatchExecuteRequest {
+  taskId: string;
+  command: string;
+  targets: string[];  // device ids
+  timeout?: number;
+  retryCount?: number;
+}
+
+// Single device execute result
+export interface DeviceExecuteResult {
+  deviceId: string;
+  deviceName: string;
+  success: boolean;
+  output: string;
+  error?: string;
+  exitCode: number;
+  duration: number;
+}
+
+// Batch execute result
+export interface BatchExecuteResult {
+  taskId: string;
+  command: string;
+  results: DeviceExecuteResult[];
+  totalDuration: number;
+  successCount: number;
+  failureCount: number;
+}
+
+// Agent configuration
+export interface AgentConfig {
+  masterHost: string;
+  masterPort: number;
+  secretKey: string;
+  agentName: string;
+  reconnectInterval: number;
+  heartbeatInterval: number;
+}
+
+// WebSocket message type
+export type WSMessageType =
+  | 'auth'
+  | 'auth_result'
+  | 'heartbeat'
+  | 'heartbeat_ack'
+  | 'command'
+  | 'command_result'
+  | 'status'
+  | 'error';
+
+// WebSocket message
+export interface WSMessage {
+  type: WSMessageType;
+  taskId?: string;
+  payload: any;
+  timestamp: number;
+}

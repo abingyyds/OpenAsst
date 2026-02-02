@@ -212,7 +212,7 @@ export class ProjectAnalyzer {
       }
     }
 
-    return deps.slice(0, 20); // 限制数量
+    return deps.slice(0, 20); // Limit count
   }
 
   /**

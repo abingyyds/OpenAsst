@@ -731,6 +731,65 @@ Important:
   }
 
   /**
+   * Plan a task and return commands without executing
+   * Used for cluster control to generate commands for multiple devices
+   */
+  async planTask(userGoal: string): Promise<{ commands: string[]; description: string }> {
+    const prompt = `You are an intelligent system assistant. The user wants to execute a task on multiple remote Linux servers.
+
+## User's Goal
+${userGoal}
+
+## Instructions
+1. Analyze the user's goal
+2. Generate a list of shell commands that will accomplish this task
+3. Commands should be suitable for execution on remote Linux servers
+4. Use common package managers (apt, yum, dnf) with auto-confirm flags (-y)
+5. Keep commands simple and atomic
+
+Return JSON:
+{
+  "description": "Brief description of what these commands will do",
+  "commands": [
+    "command1",
+    "command2"
+  ]
+}
+
+Important:
+- Only return shell commands, no explanations in the commands array
+- Use sudo where needed for system operations
+- Prefer apt-get for Debian/Ubuntu, but commands should be adaptable
+- Each command should be independent and executable`;
+
+    try {
+      const response = await this.client.messages.create({
+        model: this.model,
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }]
+      });
+
+      const content = response.content[0];
+      if (content.type !== 'text') {
+        return { commands: [], description: 'Failed to generate commands' };
+      }
+
+      const jsonMatch = content.text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          commands: parsed.commands || [],
+          description: parsed.description || ''
+        };
+      }
+    } catch (e) {
+      Logger.error(`Failed to plan task: ${(e as Error).message}`);
+    }
+
+    return { commands: [], description: 'Failed to generate commands' };
+  }
+
+  /**
    * Generate a summary of the task execution
    */
   private async generateSummary(state: TaskState): Promise<string> {

@@ -283,7 +283,7 @@ export class AutoDeployEngine {
           }
         }
 
-        // 重新构建
+        // Rebuild
         log = await this.executor.execute(buildCmd);
       }
     }
@@ -315,7 +315,7 @@ export class AutoDeployEngine {
 
     Logger.info(`Starting: ${startCmd}`);
 
-    // 后台启动
+    // Start in background
     const cmd = `cd "${projectPath}" && nohup ${startCmd} > app.log 2>&1 &`;
     const log = await this.executor.execute(cmd);
 
