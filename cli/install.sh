@@ -25,53 +25,80 @@ check_node() {
   return 1
 }
 
+# Install Node.js via nvm (fallback for old systems)
+install_node_nvm() {
+  echo "Installing Node.js via nvm..."
+  export NVM_DIR="$HOME/.nvm"
+
+  if [ ! -d "$NVM_DIR" ]; then
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+  fi
+
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  nvm install 16
+  nvm use 16
+  nvm alias default 16
+}
+
 # Install Node.js
 install_node() {
   echo "Installing Node.js..."
 
   case "$OS" in
     Linux)
+      INSTALL_SUCCESS=false
+
       if command -v apt-get &> /dev/null; then
-        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-        sudo apt-get install -y nodejs
+        curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash - && \
+        sudo apt-get install -y nodejs && INSTALL_SUCCESS=true
       elif command -v yum &> /dev/null; then
-        curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-        sudo yum install -y nodejs
+        curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash - && \
+        sudo yum install -y nodejs && INSTALL_SUCCESS=true
       elif command -v dnf &> /dev/null; then
-        curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-        sudo dnf install -y nodejs
-      else
-        echo "Please install Node.js manually: https://nodejs.org"
-        exit 1
+        curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash - && \
+        sudo dnf install -y nodejs && INSTALL_SUCCESS=true
       fi
+
+      # Verify installation
+      if [ "$INSTALL_SUCCESS" = true ] && check_node; then
+        return 0
+      fi
+
+      # Fallback to nvm
+      echo "System package manager failed, trying nvm..."
+      install_node_nvm
       ;;
     Darwin)
       if command -v brew &> /dev/null; then
         brew install node
       else
-        echo "Please install Homebrew first: https://brew.sh"
-        exit 1
+        install_node_nvm
       fi
       ;;
     *)
-      echo "Unsupported OS. Please install Node.js manually."
-      exit 1
+      install_node_nvm
       ;;
   esac
 }
 
 # Main installation
 main() {
-  # Check/Install Node.js
+  # Load nvm if available
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+  # Check/Install Node.js (non-interactive)
   if ! check_node; then
-    echo "Node.js >= 16 required"
-    read -p "Install Node.js? [Y/n] " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-      install_node
-    else
-      exit 1
-    fi
+    echo "Node.js >= 16 required, installing..."
+    install_node
+    # Reload nvm after installation
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  fi
+
+  # Verify Node.js is available
+  if ! check_node; then
+    echo "ERROR: Failed to install Node.js"
+    exit 1
   fi
 
   # Install OpenAsst CLI

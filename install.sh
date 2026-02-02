@@ -61,10 +61,10 @@ install_node_via_nvm() {
     # Load nvm
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-    # Install Node.js 18 (better glibc compatibility than 20/22)
-    nvm install 18
-    nvm use 18
-    nvm alias default 18
+    # Install Node.js 16 (best glibc compatibility for old systems)
+    nvm install 16
+    nvm use 16
+    nvm alias default 16
 
     # Verify installation
     if command_exists node; then
@@ -79,11 +79,11 @@ install_node_via_nvm() {
 install_node() {
     if command_exists node; then
         NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-        if [ "$NODE_VERSION" -ge 18 ]; then
+        if [ "$NODE_VERSION" -ge 16 ]; then
             success "Node.js $(node -v) found"
             return 0
         else
-            warn "Node.js version too old ($(node -v)), need v18+"
+            warn "Node.js version too old ($(node -v)), need v16+"
         fi
     fi
 
@@ -93,9 +93,9 @@ install_node() {
     case $OS in
         macos)
             if command_exists brew; then
-                brew install node@18
+                brew install node
             else
-                curl -fsSL https://nodejs.org/dist/v18.20.0/node-v18.20.0.pkg -o /tmp/node.pkg
+                curl -fsSL https://nodejs.org/dist/v16.20.2/node-v16.20.2.pkg -o /tmp/node.pkg
                 sudo installer -pkg /tmp/node.pkg -target /
                 rm /tmp/node.pkg
             fi
@@ -105,20 +105,20 @@ install_node() {
             INSTALL_SUCCESS=false
 
             if command_exists apt-get; then
-                curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && \
+                curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash - && \
                 sudo apt-get install -y nodejs && INSTALL_SUCCESS=true
             elif command_exists yum; then
-                curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash - && \
+                curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash - && \
                 sudo yum install -y nodejs && INSTALL_SUCCESS=true
             elif command_exists dnf; then
-                curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash - && \
+                curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash - && \
                 sudo dnf install -y nodejs && INSTALL_SUCCESS=true
             fi
 
             # Check if installation succeeded and version is correct
             if [ "$INSTALL_SUCCESS" = true ] && command_exists node; then
                 NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-                if [ "$NODE_VERSION" -ge 18 ]; then
+                if [ "$NODE_VERSION" -ge 16 ]; then
                     success "Node.js $(node -v) installed"
                     return 0
                 fi
