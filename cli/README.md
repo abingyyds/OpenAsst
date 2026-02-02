@@ -63,7 +63,7 @@ openasst run "uname -a" --all
 ### One-liner (Recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/cli/install.sh | bash
 ```
 
 ### Manual Installation
@@ -85,8 +85,8 @@ npm link
 
 ### Requirements
 
-- **Node.js** >= 18.0.0
-- **npm** >= 8.0.0
+- **Node.js** >= 16.0.0
+- **npm** >= 7.0.0
 - **SSH client** (for cluster control)
 - **sshpass** (optional, for password authentication)
 

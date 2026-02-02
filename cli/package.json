@@ -6,10 +6,15 @@
   "bin": {
     "openasst": "./dist/index.js"
   },
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts"
+    "dev": "ts-node src/index.ts",
+    "prepublishOnly": "npm run build",
+    "postinstall": "node scripts/postinstall.js || true"
   },
   "keywords": [
     "cli",
@@ -27,12 +32,15 @@
     "commander": "^11.0.0",
     "dotenv": "^16.6.0",
     "inquirer": "^8.2.5",
-    "ora": "^5.4.1"
+    "ora": "^5.4.1",
+    "ws": "^8.14.0",
+    "yaml": "^2.3.0"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.9",
     "@types/node": "^20.19.30",
     "@types/ora": "^3.1.0",
+    "@types/ws": "^8.5.10",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.0"
   }
