@@ -2,7 +2,26 @@ import inquirer from 'inquirer';
 import { ConfigManager } from '../utils/config';
 import { Logger } from '../utils/logger';
 
-export async function configCommand(): Promise<void> {
+interface ConfigOptions {
+  apiKey?: string;
+  baseUrl?: string;
+  model?: string;
+}
+
+export async function configCommand(options?: ConfigOptions): Promise<void> {
+  // Non-interactive mode: if apiKey is provided via options
+  if (options?.apiKey) {
+    const config = {
+      apiKey: options.apiKey,
+      baseUrl: options.baseUrl || undefined,
+      model: options.model || 'claude-3-5-sonnet-20241022'
+    };
+    ConfigManager.save(config);
+    Logger.success('Config saved to: ' + ConfigManager.getConfigPath());
+    return;
+  }
+
+  // Interactive mode
   Logger.info('Configure OpenAsst CLI');
 
   const answers = await inquirer.prompt([

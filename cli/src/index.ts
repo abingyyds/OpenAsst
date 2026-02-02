@@ -72,6 +72,9 @@ program
 program
   .command('config')
   .description('Configure API key and settings')
+  .option('-k, --api-key <key>', 'API key (non-interactive)')
+  .option('-u, --base-url <url>', 'API base URL')
+  .option('-m, --model <model>', 'Model name')
   .action(configCommand);
 
 // AI assistant
