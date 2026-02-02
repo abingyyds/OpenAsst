@@ -21,21 +21,29 @@ export interface CommandExecutionResult {
 }
 
 export const commandApi = {
-  async execute(serverId: string, command: string): Promise<CommandExecutionResult> {
+  async execute(serverId: string, command: string, timeout?: number): Promise<CommandExecutionResult> {
     const userId = await getCurrentUserId()
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
     if (userId) headers['X-User-Id'] = userId
 
-    const response = await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ command }),
-    })
+    const controller = new AbortController()
+    const timeoutId = timeout ? setTimeout(() => controller.abort(), timeout) : null
 
-    if (!response.ok) {
-      throw new Error('命令执行失败')
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ command, timeout }),
+        signal: controller.signal
+      })
+
+      if (!response.ok) {
+        throw new Error('命令执行失败')
+      }
+
+      return response.json()
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
     }
-
-    return response.json()
   }
 }
