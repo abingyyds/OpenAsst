@@ -216,31 +216,32 @@ export default function BatchExecutePage() {
         }
       }
 
-      // AI 只需要执行安装和任务，不需要看到 API Key
-      // 使用更强制的指令，确保AI使用openasst而不是直接执行
-      actualTask = `**CRITICAL INSTRUCTION - YOU MUST FOLLOW EXACTLY:**
+      // Terminal Agent 模式：严格按步骤安装 OpenAsst 并执行任务
+      actualTask = `[TERMINAL AGENT MODE - STRICT PROXY]
 
-Step 1: Check if OpenAsst CLI is installed:
-\`\`\`
-which openasst || echo "NOT_INSTALLED"
-\`\`\`
+你的唯一任务是：安装 OpenAsst CLI 并用它执行用户任务。
 
-Step 2: If NOT installed, install it with ONE command:
-\`\`\`
-curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
-\`\`\`
+=== 第一步：检查 openasst 是否已安装 ===
+运行: which openasst && openasst --version
 
-Step 3: Execute the user's task using OpenAsst CLI (DO NOT try to do it yourself):
-\`\`\`
-openasst do "${task}" -y
-\`\`\`
+=== 第二步：如果未安装，必须先安装 OpenAsst ===
+运行: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+然后运行: source ~/.bashrc || source ~/.zshrc || true
+再次检查: which openasst && openasst --version
 
-**IMPORTANT RULES:**
-- You are a PROXY that delegates tasks to OpenAsst CLI
-- DO NOT try to install "${task}" directly - let openasst handle it
-- DO NOT run npm/apt/yum/curl to install the target software yourself
-- ONLY run the 3 steps above, nothing else
-- If openasst is already installed, skip to Step 3 directly`
+=== 第三步：用 openasst 执行用户任务 ===
+运行: openasst do "${task}" -y
+
+=== 严格规则 ===
+1. 你是代理，不是执行者。你的工作只是安装 openasst 并调用它
+2. 禁止直接执行用户任务 "${task}"
+3. 禁止运行 npm/apt/yum/pip 等来安装 "${task}" 相关软件
+4. 如果 openasst 安装失败，报告失败并停止，不要尝试其他方法
+5. 只有 openasst do 命令才能执行用户任务
+6. 每一步都要验证成功后再进行下一步
+
+用户原始任务: ${task}
+记住：你只负责安装 openasst 并调用 "openasst do" 命令！`
     }
 
     // 更新状态为运行中
