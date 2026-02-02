@@ -205,12 +205,15 @@ export class KnowledgeManager {
         return 0;
       }
 
+      console.log(`[Marketplace] 找到 ${scripts.length} 个公开脚本`);
+
       // 2. 获取已存在的 knowledge_items 标题
       const { data: existingItems } = await supabase
         .from('knowledge_items')
         .select('title');
 
       const existingTitles = new Set((existingItems || []).map(i => i.title));
+      console.log(`[Marketplace] 知识库已有 ${existingTitles.size} 个项目`);
 
       // 3. 转换并插入新的知识项
       let syncedCount = 0;
