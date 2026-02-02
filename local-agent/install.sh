@@ -47,9 +47,13 @@ echo "  Start agent: ~/.openasst/start.sh"
 echo "  Or run:      node ~/.openasst/agent.js"
 echo ""
 
-# Ask whether to start immediately
-read -p "  Start agent now? [Y/n] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
-    exec "$INSTALL_DIR/start.sh"
+# Ask whether to start immediately (only if running interactively)
+if [ -t 0 ]; then
+    read -p "  Start agent now? [Y/n] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+        exec "$INSTALL_DIR/start.sh"
+    fi
+else
+    echo "  To start: ~/.openasst/start.sh"
 fi
