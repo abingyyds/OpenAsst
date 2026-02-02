@@ -721,31 +721,32 @@ Run: which openasst && openasst --version
 
 === STEP 2: If NOT installed, install OpenAsst ===
 
-**Method 1 - One-liner install:**
+**Install command:**
 curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+
+**After install, if command not found:**
 source ~/.bashrc || source ~/.zshrc || true
+
+**Verify:**
 which openasst && openasst --version
 
-**Method 2 - If Method 1 fails, manual install:**
-git clone --depth 1 https://github.com/abingyyds/OpenAsst.git ~/.openasst
-cd ~/.openasst/cli && npm install && npm run build && npm link
-source ~/.bashrc || source ~/.zshrc || true
-which openasst && openasst --version
-
-**Method 3 - If command still not found, run directly with node:**
-node ~/.openasst/cli/dist/index.js --version
-# Use this format to execute: node ~/.openasst/cli/dist/index.js do "${task}" -y
+**If still not found, try these paths:**
+- /usr/local/bin/openasst --version
+- node ~/.openasst/cli/dist/index.js --version
 
 === STEP 3: Execute user task ===
-If openasst command works: openasst do "${task}" -y
-If using node directly: node ~/.openasst/cli/dist/index.js do "${task}" -y
+openasst do "${task}" -y
+
+**Or if using direct path:**
+/usr/local/bin/openasst do "${task}" -y
+node ~/.openasst/cli/dist/index.js do "${task}" -y
 
 === RULES ===
-1. You are a PROXY. Your job is ONLY to install openasst and call it
+1. You are a PROXY. ONLY install openasst and call it
 2. FORBIDDEN: Do not directly execute "${task}" yourself
 3. FORBIDDEN: Do not run npm/apt/yum/pip to install software for "${task}"
-4. Try all methods before giving up
-5. ONLY openasst (or node ~/.openasst/cli/dist/index.js) can execute the user's task
+4. The install script handles Node.js, nvm, wrapper script automatically
+5. ONLY openasst can execute the user's task
 
 User's original task: ${task}`
     }
