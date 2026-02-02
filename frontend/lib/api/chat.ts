@@ -252,7 +252,7 @@ export const chatApi = {
                   callbacks.onComplete?.(data)
                   break
                 case 'done':
-                  callbacks.onDone?.(data)
+                  await callbacks.onDone?.(data)
                   break
                 case 'error':
                   callbacks.onError?.(data)
