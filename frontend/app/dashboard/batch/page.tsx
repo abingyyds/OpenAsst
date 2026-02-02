@@ -221,7 +221,6 @@ Task is complete when openasst --version shows version number.`
         sessionStorage.setItem(`pending-batch-config-${serverId}`, apiConfigCmd)
       }
     }
-    }
 
     // 更新状态为运行中
     setExecutions(prev => {
