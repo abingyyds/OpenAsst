@@ -1,45 +1,14 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-02-02T00:00:00.000Z",
+  "lastUpdated": "2026-02-02T07:08:45.681Z",
   "categories": [
     {
-      "id": "cli",
-      "name": "OpenAsst CLI",
-      "description": "CLI commands and cluster control"
-    },
-    {
-      "id": "system",
-      "name": "System Operations",
-      "description": "System administration and monitoring"
-    },
-    {
-      "id": "docker",
-      "name": "Docker",
-      "description": "Docker container management"
-    },
-    {
-      "id": "network",
-      "name": "Network",
-      "description": "Network configuration and troubleshooting"
-    },
-    {
-      "id": "security",
-      "name": "Security",
-      "description": "Security best practices"
-    },
-    {
-      "id": "deployment",
-      "name": "Deployment",
-      "description": "Application deployment"
+      "id": "custom",
+      "name": "custom",
+      "description": "custom knowledge"
     }
   ],
   "files": [
-    "cli.json",
-    "system.json",
-    "docker.json",
-    "network.json",
-    "security.json",
-    "deployment.json",
     "custom.json"
   ]
 }
