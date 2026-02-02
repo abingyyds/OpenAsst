@@ -16,26 +16,28 @@
 
 ## Quick Start
 
-**One-liner install:**
+**1. Install (one command):**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
 ```
 
-**Configure API:**
+**2. If command not found, restart terminal or run:**
+
+```bash
+source ~/.bashrc  # or source ~/.zshrc
+```
+
+**3. Configure API:**
 
 ```bash
 openasst config
 ```
 
-**Start using:**
+**4. Start using:**
 
 ```bash
-# Single machine - natural language task execution
 openasst do "install docker and start it"
-
-# Cluster control - execute on multiple servers
-openasst run "uname -a" --all
 ```
 
 ---
@@ -570,15 +572,14 @@ OpenAsst includes built-in security protection:
 #### `openasst: command not found`
 
 ```bash
-# Check if npm link was successful
-npm list -g openasst
+# Solution 1: Restart terminal or reload shell
+source ~/.bashrc  # or source ~/.zshrc
 
-# Re-link the command
-cd OpenAsst/cli
-npm link
+# Solution 2: Re-run installer
+curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
 
-# Or add to PATH manually
-export PATH="$PATH:$(npm root -g)/../bin"
+# Solution 3: Manual fix
+node ~/.openasst/cli/dist/index.js --version
 ```
 
 #### `npm install` fails with permission error

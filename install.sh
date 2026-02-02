@@ -213,10 +213,49 @@ main() {
     success "Build complete"
     echo ""
 
-    # Create symlink
+    # Create command - multiple methods for reliability
     info "Creating command..."
-    sudo npm link --silent 2>/dev/null || npm link --silent
-    success "Command 'openasst' created"
+
+    # Method 1: Try npm link
+    npm link --silent 2>/dev/null || sudo npm link --silent 2>/dev/null || true
+
+    # Method 2: Create wrapper script in /usr/local/bin (more reliable)
+    WRAPPER_PATH="/usr/local/bin/openasst"
+    CLI_PATH="$INSTALL_DIR/cli/dist/index.js"
+
+    if [ -w "/usr/local/bin" ] || [ -w "$(dirname $WRAPPER_PATH)" ]; then
+        cat > "$WRAPPER_PATH" << EOF
+#!/bin/bash
+export NVM_DIR="\$HOME/.nvm"
+[ -s "\$NVM_DIR/nvm.sh" ] && . "\$NVM_DIR/nvm.sh"
+node "$CLI_PATH" "\$@"
+EOF
+        chmod +x "$WRAPPER_PATH"
+    else
+        sudo bash -c "cat > $WRAPPER_PATH << EOF
+#!/bin/bash
+export NVM_DIR=\"\\\$HOME/.nvm\"
+[ -s \"\\\$NVM_DIR/nvm.sh\" ] && . \"\\\$NVM_DIR/nvm.sh\"
+node $CLI_PATH \"\\\$@\"
+EOF"
+        sudo chmod +x "$WRAPPER_PATH"
+    fi
+
+    # Verify installation
+    if command_exists openasst; then
+        success "Command 'openasst' created"
+    else
+        # Method 3: Add to PATH via shell profile
+        warn "Adding openasst to PATH..."
+        SHELL_PROFILE=""
+        [ -f "$HOME/.bashrc" ] && SHELL_PROFILE="$HOME/.bashrc"
+        [ -f "$HOME/.zshrc" ] && SHELL_PROFILE="$HOME/.zshrc"
+
+        if [ -n "$SHELL_PROFILE" ]; then
+            echo "alias openasst='node $CLI_PATH'" >> "$SHELL_PROFILE"
+            success "Added openasst alias to $SHELL_PROFILE"
+        fi
+    fi
     echo ""
 
     # Add nvm to shell profile if needed
@@ -247,6 +286,16 @@ main() {
     echo -e "${GREEN}  OpenAsst installed successfully! 🎉${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
+
+    # Final verification
+    info "Verifying installation..."
+    if openasst --version >/dev/null 2>&1; then
+        success "openasst $(openasst --version) is ready!"
+    else
+        warn "Please restart your terminal or run: source ~/.bashrc"
+    fi
+    echo ""
+
     echo "Next steps:"
     echo "  1. Configure API key:"
     echo -e "     ${BLUE}openasst config${NC}"
