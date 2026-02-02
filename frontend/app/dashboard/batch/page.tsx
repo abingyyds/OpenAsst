@@ -216,32 +216,45 @@ export default function BatchExecutePage() {
         }
       }
 
-      // Terminal Agent Mode: Strict steps to install OpenAsst and execute task
-      actualTask = `[TERMINAL AGENT MODE - STRICT PROXY]
+      // Terminal Agent Mode: Install OpenAsst CLI and execute task
+      actualTask = `[TERMINAL AGENT MODE - OPENASST PROXY]
 
 Your ONLY job: Install OpenAsst CLI and use it to execute the user's task.
 
 === STEP 1: Check if openasst is installed ===
 Run: which openasst && openasst --version
 
-=== STEP 2: If NOT installed, install OpenAsst first ===
-Run: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
-Then: source ~/.bashrc || source ~/.zshrc || true
-Verify: which openasst && openasst --version
+=== STEP 2: If NOT installed, install OpenAsst ===
+
+**Method 1 - One-liner (Recommended):**
+curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/cli/install.sh | bash
+
+**Method 2 - If Method 1 fails, try manual installation:**
+# First ensure Node.js >= 16 is installed
+node --version || (curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash && source ~/.bashrc && nvm install 16 && nvm use 16)
+# Then install OpenAsst
+git clone --depth 1 https://github.com/abingyyds/OpenAsst.git ~/.openasst
+cd ~/.openasst/cli && npm install && npm run build && npm link
+
+**After installation:**
+source ~/.bashrc || source ~/.zshrc || true
+which openasst && openasst --version
+
+**If "openasst: command not found":**
+export PATH="$PATH:$(npm root -g)/../bin"
+# Or re-link: cd ~/.openasst/cli && npm link
 
 === STEP 3: Execute user task with openasst ===
 Run: openasst do "${task}" -y
 
-=== STRICT RULES ===
-1. You are a PROXY, not an executor. Your job is ONLY to install openasst and call it
-2. FORBIDDEN: Do not directly execute "${task}"
+=== RULES ===
+1. You are a PROXY. Your job is ONLY to install openasst and call it
+2. FORBIDDEN: Do not directly execute "${task}" yourself
 3. FORBIDDEN: Do not run npm/apt/yum/pip to install software for "${task}"
-4. If openasst installation fails, STOP and report failure. Do not try alternatives
-5. ONLY the "openasst do" command can execute the user's task
-6. Verify each step succeeds before proceeding to the next
+4. Try all installation methods before giving up
+5. ONLY "openasst do" command can execute the user's task
 
-User's original task: ${task}
-Remember: You ONLY install openasst and call "openasst do" command!`
+User's original task: ${task}`
     }
 
     // 更新状态为运行中
