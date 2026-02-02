@@ -32,13 +32,14 @@ export async function doCommand(task: string, options: DoOptions): Promise<void>
     return;
   }
 
-  const engine = new SmartTaskEngine(config);
-  const presenter = new ResultPresenter();
-  const marketplace = new Marketplace();
+  try {
+    const engine = new SmartTaskEngine(config);
+    const presenter = new ResultPresenter();
+    const marketplace = new Marketplace();
 
-  Logger.info('\n========================================');
-  Logger.info('  SMART TASK ENGINE');
-  Logger.info('========================================\n');
+    Logger.info('\n========================================');
+    Logger.info('  SMART TASK ENGINE');
+    Logger.info('========================================\n');
 
   // Auto-fetch relevant scripts from API
   const relevantScripts = await marketplace.searchFromApi(task);
@@ -92,6 +93,13 @@ export async function doCommand(task: string, options: DoOptions): Promise<void>
 
   // Offer follow-up actions
   await offerFollowUp(result, engine, options);
+
+  } catch (error) {
+    Logger.error(`Task execution failed: ${(error as Error).message}`);
+    if (options.verbose) {
+      console.error(error);
+    }
+  }
 }
 
 function showSmartResult(result: SmartTaskResult): void {
