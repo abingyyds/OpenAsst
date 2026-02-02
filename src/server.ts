@@ -903,6 +903,24 @@ app.get('/api/scripts/search', async (req, res) => {
   }
 });
 
+// 获取热门脚本 (must be before :id route)
+app.get('/api/scripts/popular', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 5;
+    const { data, error } = await supabase
+      .from('script_templates')
+      .select('*')
+      .order('like_count', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    console.error('获取热门脚本失败:', err);
+    res.json([]);
+  }
+});
+
 // 获取单个脚本
 app.get('/api/scripts/:id', async (req, res) => {
   try {
@@ -921,23 +939,6 @@ app.get('/api/scripts/:id', async (req, res) => {
   } catch (err) {
     console.error('获取脚本失败:', err);
     res.status(500).json({ error: (err as Error).message });
-  }
-});
-
-app.get('/api/scripts/popular', async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit as string) || 5;
-    const { data, error } = await supabase
-      .from('script_templates')
-      .select('*')
-      .order('like_count', { ascending: false })
-      .limit(limit);
-
-    if (error) throw error;
-    res.json(data || []);
-  } catch (err) {
-    console.error('获取热门脚本失败:', err);
-    res.json([]);
   }
 });
 
