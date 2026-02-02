@@ -1,5 +1,6 @@
 {
   "category": "deployment",
+  "description": "deployment related knowledge",
   "items": [
     {
       "id": "deploy-001",
@@ -43,6 +44,40 @@
       "createdAt": "2026-01-31T15:07:00.847Z",
       "updatedAt": "2026-01-31T15:07:00.847Z",
       "id": "deployment-1769872020847"
+    },
+    {
+      "id": "02731cfc-e784-4b6c-bbcd-f485ce2097a3",
+      "title": "Openclaw-Telegram",
+      "keywords": [],
+      "solution": "在正式开始为OpenClaw（Clawdbot）配置接入Telegram之前，请依次检查如下事项是否准备完成：\n\n您已经拥有一个Telegram账号。\n\n是否已经在轻量应用服务器Lighthouse实例中完成了OpenClaw部署，且为2026.1.24-3及更高版本。如果暂时还没有，建议：\n\n如果您希望新购一台Lighthouse服务器来安装运行OpenClaw，可以前往腾讯云Lighthouse产品的购买页选购，或者前往腾讯云OpenClaw专属活动进行优惠下单。详细的部署和配置OpenClaw流程可参考云上OpenClaw(原Clawdbot)一键秒级部署指南。\n\n如果已有Lighthouse服务器，但不是新版本的应用模板，那么可以参考云上OpenClaw(原Clawdbot)一键秒级部署指南中重装Lighthouse实例的部分，按照指引操作后，再进行后续配置。\n\n接入Telegram\nOpenClaw 原生支持通过 WhatsApp、Telegram、Discord 等常用聊天软件交互。\n\n在Telegram中创建一个Bot\n在 Telegram 中搜索 @BotFather，并点击\n\n\n发送 /newbot\n\n\n按提示输入 Bot 名称和用户名（注意：用户名必须以“_bot”结尾）\n\n\n输入完成后会收到Token，请保存好勿外露，后续在OpenClaw中添加。\n\n为OpenClaw配置模型\n接下来需要为已经完成部署的OpenClaw配置模型。\n\n进入腾讯云控制台，选中对应的已部署OpenClaw的Lighthouse服务器，点击服务器卡片进入“管理实例”页面。\n\n\n模型配置\n\n为OpenClaw配置模型API Key可以在Lighthouse服务器的应用管理页面进行操作。详情可参考云上OpenClaw(原Clawdbot)一键秒级部署指南-配置模型APIKey，此处不再赘述。\n\n开始配置OpenClaw\n首次登入服务器后，输入并回车运行如下命令开始配置：\n\n代码语言：Bash\n\n自动换行\nAI代码解释\nclawdbot onboard\n运行 clawdbot onboard 后，需要通过键盘来完成后续配置动作，关键操作：方向键控制选项，回车表示选择并确认。\n\n同意免责声明\n运行上面的命令后，将会出现一个问题：是否知晓风险，选择Yes就行。\n\n\n配置模式选择：快速入门\n接下来需要选择Onboarding的模式，我们选择QuickStart。\n\n\n配置处理方式\n选择 Use existing values\n\n\n模型配置\n跳过此步骤即可。上述过程中已在腾讯云控制台配置大模型。\n\nChannel 选择 Telegram\n在 Select channel 的步骤中，用键盘方向键选中 Telegram (Bot API) ，并且回车：\n\n\n填写Bot token\n前文中保存Telegram的Bot token\n\n\n配置 Skills\n选择：No\n\n原因：Skills 可以启用系统级自动化能力，包括：\n\n文件访问\n\n浏览器控制\n\nShell命令执行\n\n对于初次部署，限制权限可以提升稳定性和安全性。\n\n\n启用 Hooks\n只选择: session-memory\n\n原因：\n\n启用会话记忆能力\n\n不会执行任何系统命令\n\n安全风险最低\n\n这是继续下一步的必要选项\n\n请勿选择：\n\n启动时自动运行脚本（boot-md）\n\n命令跟踪与日志记录（command-logger）\n\n\nGateway service already installed\n选择 Restart\n\n\nHow do you want to hatch your bot\n选择 Do this later\n\n\n在Telegram中与Bot聊天\n在上文中BotFather的聊天中，点击图示的位置，打开Bot对话框\n\n\n点击START\n\n\n首次对话，会发送一个配对码，运行下方命令完成配对\n\n\n在腾讯云轻量应用服务器中输入命令\n\n代码语言：Bash\n\n自动换行\nAI代码解释\nopenclaw pairing approve telegram <code>\n注意：将<code>替换为您在Telegram中收到的Pairingcode，输入时不加<>\n\n现在，您可以在Telegram中和已经打通OpenClaw的机器人进行聊天了",
+      "commands": []
+    },
+    {
+      "id": "450962a6-ff26-4cb7-a17b-7750030f4a3d",
+      "title": "Openclaw-WhatsApp",
+      "keywords": [],
+      "solution": "接入WhatsApp步骤\nOpenClaw 原生支持通过 WhatsApp、Telegram、Discord 等常用聊天软件交互。\n\n为OpenClaw配置模型\n首先需要为OpenClaw配置模型。\n\n进入腾讯云控制台，选中对应的已部署OpenClaw的Lighthouse服务器，点击服务器卡片进入“管理实例”页面。\n\n\n模型配置\n\n为OpenClaw配置模型API Key可以在Lighthouse服务器的应用管理页面进行操作。详情可参考云上OpenClaw(原Clawdbot)一键秒级部署指南-配置模型APIKey，此处不再赘述。\n\n开始配置\n首次登入服务器后，输入并回车运行如下命令开始配置：\n\n代码语言：Bash\n\n自动换行\nAI代码解释\nclawdbot onboard\n运行 clawdbot onboard 后，需要通过键盘来完成后续配置动作，关键操作：方向键控制选项，回车表示选择并确认。\n\n同意免责声明\n运行上面的命令后，将会出现一个问题：是否知晓风险，选择Yes就行。\n\n\n配置模式选择：快速入门\n接下来需要选择Onboarding的模式，我们选择QuickStart。\n\n\n模型配置\n跳过此步骤即可。上述过程中已在腾讯云控制台配置大模型。\n\nChannel 选择 WhatsApp\n在 Select channel 的步骤中，用键盘方向键选中 WhatsApp (QR link) ，并且回车：\n\n\nLink WhatsApp now (QR)?\n选择 Yes\n\n\n用手机 WhatsApp 扫描二维码\n\n选择手机号码设置\n当你只有一个账号时，选择 This is my personal phone number；\n\n当你为 OpenClaw 单独准备了一个账号时，选择 Separate phone just for Clawdbot。\n\n\n输入手机号\n\npolicy设置（手机号码设置 Separate phone just for Clawdbot时）\n默认选择第一个 Pairing (recommended) 即可\n\n\nallowFrom设置（手机号码设置 Separate phone just for Clawdbot时）\n默认选择第一个 Unset allowFrom (default) 即可\n\n\n配置 Skills\n选择：No\n\n原因：Skills 可以启用系统级自动化能力，包括：\n\n文件访问\n\n浏览器控制\n\nShell命令执行\n\n对于初次部署，限制权限可以提升稳定性和安全性。\n\n\n启用 Hooks\n只选择: session-memory\n\n原因：\n\n启用会话记忆能力\n\n不会执行任何系统命令\n\n安全风险最低\n\n这是继续下一步的必要选项\n\n请勿选择：\n\n启动时自动运行脚本（boot-md）\n\n命令跟踪与日志记录（command-logger）\n\n\nGateway service already installed\n选择 Restart\n\n\nHow do you want to hatch your bot\n选择 Do this later\n\n\n个人玩法实践\n在 WhatsApp 中接入 OpenClaw 之后，它并不是一个“陪你聊天的 AI”，而是一个长期在线、可以直接操作云主机的个人 Agent。通过自然语言对话，我把日常琐碎但重复的事情，直接交给它去完成。\n\n场景一：定时提醒（AI + cron 的最小闭环）\n我直接在 WhatsApp 里描述需求，例如每天固定时间的天气提醒、吃饭提醒、倒垃圾提醒。\n\n\nOpenClaw 会先确认必要信息（如城市），然后创建对应的 cron 任务。\n\n\n整个过程中，我不需要接触服务器、不需要写定时表达式，只是像和人说话一样描述需求，任务就变成了一个长期运行的自动流程。\n\n之后提醒会按时触达主会话，Agent 只在“需要我知道的时候”出现。\n\n场景二：文件整理与合并（对话即操作）\n当我让 OpenClaw 查看某个目录、读取多个文件并合并内容时，它并不是“假装理解”，而是真的进入服务器文件系统执行操作：\n\n查看指定路径下的文件数量\n\n逐个读取文件内容\n\n按要求合并为新文件并保存\n\n最后把操作结果和结构化总结返回给我\n\n\nWhatsApp 在这里更像是一个远程控制台，而 OpenClaw 是执行者。\n\n我看到的不是命令行输出，而是已经整理好的“人类可读结果”。\n\n\n场景三：生成并运行代码（从“写”到“跑”）\n我只说一句“新建一个 Python 文件，输出 hello world”，OpenClaw 会完成完整链路：\n\n\n在指定目录创建脚本文件\n\n写入标准 Python 代码\n\n执行脚本进行验证\n\n把运行结果回传给我\n\n\n\n这里最关键的一点是：\n\nAgent 不止写代码，还会自己验证是否可运行。\n\nWhatsApp 里的每一次回复，背后都对应着一次真实的系统行为。",
+      "commands": []
+    },
+    {
+      "id": "e2490548-cd57-4713-8e2d-382b6883c3d1",
+      "title": "Openclaw-Discord",
+      "keywords": [],
+      "solution": "接入Discord\n创建 Discord Bot 并获取 Token（开发者平台操作）\n这是接入的核心凭证，步骤如下：\n\n1. 打开 Discord 开发者平台：https://discord.com/developers/applications，点击New Application，输入 Bot 名称（如 Moltbot-AI），同意条款后创建\n\n\n2. 进入应用页面，点击左侧Bot→Add Bot，确认创建 Bot 用户；\n\n3. 复制Token（点击Reset Token生成，妥善保存，泄露会导致 Bot 被滥用）；\n\n4. 开启关键权限（必做，否则 Moltbot 无法读取消息 / 发送回复）：下滑到Privileged Gateway Intents，开启MESSAGE CONTENT INTENT（读取消息内容）、SERVER MEMBERS INTENT（可选，用于服务器成员权限控制）；\n\n\n5. 配置 Bot 权限：左侧OAuth2→URL Generator，勾选以下权限（最小化原则）：Scopes：bot + applications.commands；\n\na. Bot Permissions：Send Messages、Read Message History、Embed Links、Use Slash Commands；\n\n6. 复制生成的Invite Link，在浏览器打开，将 Bot 邀请到你的 Discord 服务器（需服务器管理员权限）。点击Continue后进行授权，即可邀请bot加入：\n\n\n\n添加完成的效果如下图所示：\n\n\n为OpenClaw配置模型\n接下来需要为已经完成部署的OpenClaw配置模型。\n\n进入腾讯云控制台，选中对应的已部署OpenClaw的Lighthouse服务器，点击服务器卡片进入“管理实例”页面。\n\n\n模型配置\n\n为OpenClaw配置模型API Key可以在Lighthouse服务器的应用管理页面进行操作。详情可参考云上OpenClaw(原Clawdbot)一键秒级部署指南-配置模型APIKey，此处不再赘述。\n\n开始配置OpenClaw\n首次登入服务器后，输入并回车运行如下命令开始配置：\n\n代码语言：Bash\n\n自动换行\nAI代码解释\nclawdbot onboard\n运行 clawdbot onboard 后，需要通过键盘来完成后续配置动作，关键操作：方向键控制选项，回车表示选择并确认。\n\n同意免责声明\n运行上面的命令后，将会出现一个问题：是否知晓风险，选择Yes就行。\n\n\n配置模式选择：快速入门\n接下来需要选择Onboarding的模式，我们选择QuickStart。\n\n\n模型配置\n跳过此步骤即可。上述过程中已在腾讯云控制台配置大模型。\n\nChannel 选择 Discord\n在 Select channel 的步骤中，用键盘方向键选中 Discord (Bot API) ，并且回车：\n\n\n输入Discord bot token\n这里就是前文提到生成的 Bot token\n\n\n选择 Yes\n\nDiscord channels access\n选择 Open(allow all channels)\n\n\n配置 Skills\n选择：No\n\n原因：Skills 可以启用系统级自动化能力，包括：\n\n文件访问\n\n浏览器控制\n\nShell命令执行\n\n对于初次部署，限制权限可以提升稳定性和安全性。\n\n\n启用 Hooks\n只选择: session-memory\n\n原因：\n\n启用会话记忆能力\n\n不会执行任何系统命令\n\n安全风险最低\n\n这是继续下一步的必要选项\n\n请勿选择：\n\n启动时自动运行脚本（boot-md）\n\n命令跟踪与日志记录（command-logger）\n\n\nGateway service already installed\n选择 Restart\n\n\nHow do you want to hatch your bot\n选择 Do this later\n\n\n个人玩法实践\n在 Discord 中接入 OpenClaw 之后，它并不是一个“陪你聊天的 AI”，而是一个长期在线、可以直接操作云主机的个人 Agent。通过自然语言对话，我把日常琐碎但重复的事情，直接交给它去完成。\n\n场景一：定时提醒（AI + cron 的最小闭环）\n我直接在 Discord 里描述需求，例如每天固定时间的天气提醒、吃饭提醒、倒垃圾提醒。\n\n\n整个过程中，我不需要接触服务器、不需要写定时表达式，只是像和人说话一样描述需求，任务就变成了一个长期运行的自动流程。\n\n之后提醒会按时触达主会话，Agent 只在“需要我知道的时候”出现。\n\n\n场景二：文件整理与合并（对话即操作）\n当我让 OpenClaw 查看某个目录、读取多个文件并合并内容时，它并不是“假装理解”，而是真的进入服务器文件系统执行操作：\n\n查看指定路径下的文件数量\n\n逐个读取文件内容\n\n按要求合并为新文件并保存\n\n最后把操作结果和结构化总结返回给我\n\n\nDiscord 在这里更像是一个远程控制台，而 OpenClaw 是执行者。\n\n我看到的不是命令行输出，而是已经整理好的“人类可读结果”。\n\n\n场景三：生成并运行代码（从“写”到“跑”）\n我只说一句“新建一个 Python 文件，输出 hello world”，OpenClaw 会完成完整链路：\n\n\n在指定目录创建脚本文件\n\n写入标准 Python 代码\n\n执行脚本进行验证\n\n把运行结果回传给我\n\n\n这里最关键的一点是：\n\nAgent 不止写代码，还会自己验证是否可运行。\n\nDiscord 里的每一次回复，背后都对应着一次真实的系统行为。",
+      "commands": []
+    },
+    {
+      "id": "18b7cd89-5edd-4a1d-83b4-15af376012fa",
+      "title": "Edge-TTS 全球通用语音合成",
+      "keywords": [
+        "TTS",
+        "Voice",
+        "Edge",
+        "Automation",
+        "Nodejs"
+      ],
+      "solution": "# Edge-TTS 自动化部署指南（通用版）\n\n此脚本将指引 AI 自动在您的服务器上配置并运行微软 Edge 语音合成环境。\n\n## 🛠️ 第一步：环境部署\nAI 请执行以下操作：\n1. **创建工作目录**：`mkdir -p ~/.claude/skills/edge-tts`\n2. **下载技能定义文件**：\n   `curl -L -o ~/.claude/skills/edge-tts/SKILL.md https://raw.githubusercontent.com/openclaw/skills/main/skills/i3130002/edge-tts/%E6%8A%80%E8%83%BD.md`\n3. **下载环境配置文件**：\n   `curl -L -o ~/.claude/skills/edge-tts/package.json https://raw.githubusercontent.com/openclaw/skills/main/skills/i3130002/edge-tts/%E8%84%9A%E6%9C%AC/package.json`\n\n## 🚀 第二步：安装运行依赖\nAI 请进入目录并执行标准安装指令：\n`cd ~/.claude/skills/edge-tts && npm install`\n\n## 💬 交互示例\n您可以直接通过自然语言下达任务：\n- “请使用 edge-tts 技能，将这段文字生成 MP3 文件：'Hello, this is a globally compatible voice tool.'。”\n- “帮我把这个文本的内容读出来，并保存为 output.mp3。”\n\n## ⚙️ 网络说明\n- 本工具默认使用服务器的当前网络连接，无需额外配置。\n- 若您所在的网络环境无法直连微软服务，请通过环境变量或告知 AI 为您配置临时代理。",
+      "commands": []
     }
   ]
 }
