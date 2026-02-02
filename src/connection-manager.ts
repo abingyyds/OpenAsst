@@ -8,6 +8,13 @@ const execAsync = promisify(exec);
 
 export interface ConnectionExecutor {
   execute(command: string): Promise<ExecutionLog>;
+  executeStream?(
+    command: string,
+    onData: (data: string) => void,
+    onError: (error: string) => void,
+    onClose: (exitCode: number) => void,
+    timeout?: number
+  ): void;
   disconnect(): void;
 }
 
@@ -98,6 +105,28 @@ class SSHExecutor implements ConnectionExecutor {
   async execute(command: string): Promise<ExecutionLog> {
     await this.sshManager.connect(this.config);
     return this.sshManager.executeCommand(this.config.id, command);
+  }
+
+  executeStream(
+    command: string,
+    onData: (data: string) => void,
+    onError: (error: string) => void,
+    onClose: (exitCode: number) => void,
+    timeout?: number
+  ): void {
+    this.sshManager.connect(this.config).then(() => {
+      this.sshManager.executeCommandStream(
+        this.config.id,
+        command,
+        onData,
+        onError,
+        onClose,
+        timeout
+      );
+    }).catch((err) => {
+      onError(err.message);
+      onClose(1);
+    });
   }
 
   disconnect(): void {

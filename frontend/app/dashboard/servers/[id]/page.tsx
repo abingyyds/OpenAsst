@@ -841,16 +841,35 @@ Task is complete when openasst --version shows version number.`
               })
               // 需要先 source shell profile 以确保 openasst 和 nvm 可用
               const sourceCmd = 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" ; source ~/.bashrc 2>/dev/null || source ~/.zshrc 2>/dev/null || true'
-              const result = await commandApi.execute(id, `${sourceCmd} && openasst do "${pendingTask}" -y`, 300000) // 5分钟超时
-              flushSync(() => {
-                if (result.output) {
-                  setTerminalOutput(prev => [...prev, result.output])
-                }
-                if (result.exitCode === 0) {
-                  setTerminalOutput(prev => [...prev, '', '✓ Task completed successfully'])
-                } else {
-                  setTerminalOutput(prev => [...prev, '', `⚠️ Task finished with exit code: ${result.exitCode}`])
-                }
+
+              // 使用流式执行，实时显示输出
+              await new Promise<void>((resolve) => {
+                commandApi.executeStream(
+                  id,
+                  `${sourceCmd} && openasst do "${pendingTask}" -y`,
+                  (output) => {
+                    // 实时显示输出
+                    flushSync(() => {
+                      setTerminalOutput(prev => [...prev, output])
+                    })
+                  },
+                  (error) => {
+                    flushSync(() => {
+                      setTerminalOutput(prev => [...prev, `⚠️ ${error}`])
+                    })
+                  },
+                  (exitCode) => {
+                    flushSync(() => {
+                      if (exitCode === 0) {
+                        setTerminalOutput(prev => [...prev, '', '✓ Task completed successfully'])
+                      } else {
+                        setTerminalOutput(prev => [...prev, '', `⚠️ Task finished with exit code: ${exitCode}`])
+                      }
+                    })
+                    resolve()
+                  },
+                  300000 // 5分钟超时
+                )
               })
             } catch (e) {
               console.log('Task execution error:', e)

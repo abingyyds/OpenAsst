@@ -665,6 +665,62 @@ app.post('/api/servers/:id/execute', async (req, res) => {
   }
 });
 
+// 流式命令执行端点
+app.post('/api/servers/:id/execute/stream', async (req, res) => {
+  try {
+    const { command, timeout } = req.body;
+    const serverId = req.params.id;
+    const userId = req.headers['x-user-id'] as string;
+
+    if (!userId) {
+      return res.status(401).json({ error: '未授权：缺少用户ID' });
+    }
+
+    const server = await getServerById(serverId, userId);
+    if (!server) {
+      return res.status(404).json({ error: '服务器不存在或无权限访问' });
+    }
+
+    // 设置 SSE 响应头
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const executor = await connectionManager.getExecutor(server);
+
+    // 检查执行器是否支持流式执行
+    if (!executor.executeStream) {
+      res.write(`data: ${JSON.stringify({ type: 'error', data: '此连接类型不支持流式执行' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: 'done', exitCode: 1 })}\n\n`);
+      res.end();
+      return;
+    }
+
+    executor.executeStream(
+      command,
+      (data) => {
+        res.write(`data: ${JSON.stringify({ type: 'output', data })}\n\n`);
+      },
+      (error) => {
+        res.write(`data: ${JSON.stringify({ type: 'error', data: error })}\n\n`);
+      },
+      (exitCode) => {
+        res.write(`data: ${JSON.stringify({ type: 'done', exitCode })}\n\n`);
+        res.end();
+      },
+      timeout || 300000
+    );
+
+    // 处理客户端断开连接
+    req.on('close', () => {
+      // 客户端断开，可以在这里做清理
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 app.get('/api/models', (req, res) => {
   const models = [
     // Claude 3.5 系列

@@ -166,6 +166,73 @@ export class SSHManager {
     });
   }
 
+  // 流式执行命令，实时返回输出
+  executeCommandStream(
+    serverId: string,
+    command: string,
+    onData: (data: string) => void,
+    onError: (error: string) => void,
+    onClose: (exitCode: number) => void,
+    timeout: number = 300000
+  ): void {
+    const client = this.connections.get(serverId);
+    if (!client) {
+      onError(`No connection found for server ${serverId}`);
+      onClose(1);
+      return;
+    }
+
+    let timeoutId: NodeJS.Timeout | null = null;
+    let closed = false;
+
+    const cleanup = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    };
+
+    timeoutId = setTimeout(() => {
+      if (!closed) {
+        closed = true;
+        onError(`Command timed out after ${timeout / 1000} seconds`);
+        onClose(124);
+      }
+    }, timeout);
+
+    client.exec(command, (err, stream) => {
+      if (err) {
+        cleanup();
+        if (!closed) {
+          closed = true;
+          onError(err.message);
+          onClose(1);
+        }
+        return;
+      }
+
+      stream.on('close', (code: number) => {
+        cleanup();
+        if (!closed) {
+          closed = true;
+          onClose(code);
+        }
+      });
+
+      stream.on('data', (data: Buffer) => {
+        if (!closed) {
+          onData(data.toString());
+        }
+      });
+
+      stream.stderr.on('data', (data: Buffer) => {
+        if (!closed) {
+          onData(data.toString()); // 也输出 stderr
+        }
+      });
+    });
+  }
+
   disconnect(serverId: string): void {
     const client = this.connections.get(serverId);
     if (client) {
