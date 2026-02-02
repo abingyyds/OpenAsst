@@ -711,32 +711,32 @@ export default function ServerDetailPage() {
         }
       }
 
-      // Terminal Agent 模式：严格按步骤安装 OpenAsst 并执行任务
+      // Terminal Agent Mode: Strict steps to install OpenAsst and execute task
       actualTask = `[TERMINAL AGENT MODE - STRICT PROXY]
 
-你的唯一任务是：安装 OpenAsst CLI 并用它执行用户任务。
+Your ONLY job: Install OpenAsst CLI and use it to execute the user's task.
 
-=== 第一步：检查 openasst 是否已安装 ===
-运行: which openasst && openasst --version
+=== STEP 1: Check if openasst is installed ===
+Run: which openasst && openasst --version
 
-=== 第二步：如果未安装，必须先安装 OpenAsst ===
-运行: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
-然后运行: source ~/.bashrc || source ~/.zshrc || true
-再次检查: which openasst && openasst --version
+=== STEP 2: If NOT installed, install OpenAsst first ===
+Run: curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
+Then: source ~/.bashrc || source ~/.zshrc || true
+Verify: which openasst && openasst --version
 
-=== 第三步：用 openasst 执行用户任务 ===
-运行: openasst do "${task}" -y
+=== STEP 3: Execute user task with openasst ===
+Run: openasst do "${task}" -y
 
-=== 严格规则 ===
-1. 你是代理，不是执行者。你的工作只是安装 openasst 并调用它
-2. 禁止直接执行用户任务 "${task}"
-3. 禁止运行 npm/apt/yum/pip 等来安装 "${task}" 相关软件
-4. 如果 openasst 安装失败，报告失败并停止，不要尝试其他方法
-5. 只有 openasst do 命令才能执行用户任务
-6. 每一步都要验证成功后再进行下一步
+=== STRICT RULES ===
+1. You are a PROXY, not an executor. Your job is ONLY to install openasst and call it
+2. FORBIDDEN: Do not directly execute "${task}"
+3. FORBIDDEN: Do not run npm/apt/yum/pip to install software for "${task}"
+4. If openasst installation fails, STOP and report failure. Do not try alternatives
+5. ONLY the "openasst do" command can execute the user's task
+6. Verify each step succeeds before proceeding to the next
 
-用户原始任务: ${task}
-记住：你只负责安装 openasst 并调用 "openasst do" 命令！`
+User's original task: ${task}
+Remember: You ONLY install openasst and call "openasst do" command!`
     }
 
     // 添加用户任务
