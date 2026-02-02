@@ -695,12 +695,12 @@ export default function ServerDetailPage() {
     // CLI Agent 模式：将任务转换为CLI命令
     let actualTask = task
     if (useCliAgent) {
-      // 构建API配置信息（传递给AI自动同步）
-      const apiConfigForAgent = customApiKey ? JSON.stringify({
-        apiKey: customApiKey,
-        baseUrl: customBaseUrl || 'https://api.anthropic.com',
-        model: customModel || 'claude-sonnet-4-20250514'
-      }) : ''
+      // 构建 openasst config 命令参数
+      const configArgs: string[] = []
+      if (customApiKey) configArgs.push(`-k "${customApiKey}"`)
+      if (customBaseUrl) configArgs.push(`-u "${customBaseUrl}"`)
+      if (customModel) configArgs.push(`-m "${customModel}"`)
+      const configCmd = configArgs.length > 0 ? `openasst config ${configArgs.join(' ')}` : ''
 
       // Terminal Agent Mode: Install OpenAsst CLI and execute task
       actualTask = `[TERMINAL AGENT MODE - OPENASST PROXY]
@@ -715,8 +715,7 @@ curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh 
 source ~/.bashrc || source ~/.zshrc || true
 
 === STEP 3: Configure API (REQUIRED!) ===
-${apiConfigForAgent ? `Run this command to configure API:
-mkdir -p ~/.openasst-cli && echo '${apiConfigForAgent}' > ~/.openasst-cli/config.json` : 'No API config provided - openasst do will not work without API key'}
+${configCmd ? `Run: ${configCmd}` : 'No API config provided - openasst do will not work without API key'}
 
 === STEP 4: Execute user task ===
 openasst do "${task}" -y
