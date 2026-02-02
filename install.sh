@@ -48,15 +48,42 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Install Node.js via nvm (more compatible with old systems)
+install_node_via_nvm() {
+    info "Installing Node.js via nvm (for better compatibility)..."
+
+    # Install nvm
+    export NVM_DIR="$HOME/.nvm"
+    if [ ! -d "$NVM_DIR" ]; then
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    fi
+
+    # Load nvm
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+    # Install Node.js 18 (better glibc compatibility than 20/22)
+    nvm install 18
+    nvm use 18
+    nvm alias default 18
+
+    # Verify installation
+    if command_exists node; then
+        success "Node.js $(node -v) installed via nvm"
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Install Node.js if not present
 install_node() {
     if command_exists node; then
         NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-        if [ "$NODE_VERSION" -ge 16 ]; then
+        if [ "$NODE_VERSION" -ge 18 ]; then
             success "Node.js $(node -v) found"
             return 0
         else
-            warn "Node.js version too old, need v16+"
+            warn "Node.js version too old ($(node -v)), need v18+"
         fi
     fi
 
@@ -66,25 +93,43 @@ install_node() {
     case $OS in
         macos)
             if command_exists brew; then
-                brew install node
+                brew install node@18
             else
-                curl -fsSL https://nodejs.org/dist/v20.10.0/node-v20.10.0.pkg -o /tmp/node.pkg
+                curl -fsSL https://nodejs.org/dist/v18.20.0/node-v18.20.0.pkg -o /tmp/node.pkg
                 sudo installer -pkg /tmp/node.pkg -target /
                 rm /tmp/node.pkg
             fi
             ;;
         linux)
+            # Try system package manager first, fallback to nvm if it fails
+            INSTALL_SUCCESS=false
+
             if command_exists apt-get; then
-                curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-                sudo apt-get install -y nodejs
+                curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash - && \
+                sudo apt-get install -y nodejs && INSTALL_SUCCESS=true
             elif command_exists yum; then
-                curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
-                sudo yum install -y nodejs
+                curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash - && \
+                sudo yum install -y nodejs && INSTALL_SUCCESS=true
             elif command_exists dnf; then
-                curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
-                sudo dnf install -y nodejs
+                curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash - && \
+                sudo dnf install -y nodejs && INSTALL_SUCCESS=true
+            fi
+
+            # Check if installation succeeded and version is correct
+            if [ "$INSTALL_SUCCESS" = true ] && command_exists node; then
+                NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+                if [ "$NODE_VERSION" -ge 18 ]; then
+                    success "Node.js $(node -v) installed"
+                    return 0
+                fi
+            fi
+
+            # Fallback to nvm (works on old systems like CentOS 7)
+            warn "System package manager failed, trying nvm..."
+            if install_node_via_nvm; then
+                return 0
             else
-                error "Unsupported package manager. Please install Node.js manually."
+                error "Failed to install Node.js. Please install manually."
             fi
             ;;
         *)
@@ -136,6 +181,10 @@ main() {
     install_node
     echo ""
 
+    # Ensure nvm is loaded (in case Node.js was installed via nvm)
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
     # Set install directory
     INSTALL_DIR="$HOME/.openasst"
 
@@ -170,6 +219,29 @@ main() {
     success "Command 'openasst' created"
     echo ""
 
+    # Add nvm to shell profile if needed
+    if [ -d "$NVM_DIR" ]; then
+        info "Adding nvm to shell profile..."
+        SHELL_PROFILE=""
+        if [ -f "$HOME/.bashrc" ]; then
+            SHELL_PROFILE="$HOME/.bashrc"
+        elif [ -f "$HOME/.zshrc" ]; then
+            SHELL_PROFILE="$HOME/.zshrc"
+        elif [ -f "$HOME/.profile" ]; then
+            SHELL_PROFILE="$HOME/.profile"
+        fi
+
+        if [ -n "$SHELL_PROFILE" ]; then
+            # Check if nvm is already in profile
+            if ! grep -q "NVM_DIR" "$SHELL_PROFILE"; then
+                echo '' >> "$SHELL_PROFILE"
+                echo '# NVM (Node Version Manager)' >> "$SHELL_PROFILE"
+                echo 'export NVM_DIR="$HOME/.nvm"' >> "$SHELL_PROFILE"
+                echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> "$SHELL_PROFILE"
+            fi
+        fi
+    fi
+
     # Done
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}  OpenAsst installed successfully! 🎉${NC}"
@@ -185,6 +257,11 @@ main() {
     echo "  3. Get help:"
     echo -e "     ${BLUE}openasst --help${NC}"
     echo ""
+
+    # Remind user to reload shell if nvm was used
+    if [ -d "$NVM_DIR" ]; then
+        warn "If 'openasst' command not found, run: source ~/.bashrc (or restart terminal)"
+    fi
 }
 
 # Run main
