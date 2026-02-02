@@ -1,69 +1,102 @@
-# OpenAsst
+<div align="center">
 
-<p align="center">
-  <b>AI-Powered Terminal Assistant for Natural Language System Operations</b>
-</p>
+# 🤖 OpenAsst
 
-<p align="center">
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#cli-features">CLI Features</a> •
-  <a href="#cluster-control">Cluster Control</a> •
-  <a href="#web-dashboard">Web Dashboard</a> •
-  <a href="#api-sharing">API Sharing</a>
-</p>
+### AI-Powered Terminal Assistant for Natural Language System Operations
+
+[![Website](https://img.shields.io/badge/Website-OpenAsst.Ai-blue?style=for-the-badge&logo=google-chrome&logoColor=white)](https://openasst.ai)
+[![GitHub](https://img.shields.io/badge/GitHub-OpenAsst-black?style=for-the-badge&logo=github&logoColor=white)](https://github.com/abingyyds/OpenAsst)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+
+[![Node.js](https://img.shields.io/badge/Node.js-16+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20|%20Linux%20|%20Windows-lightgrey?style=flat-square)]()
+
+<br/>
+
+**🌐 [Web Dashboard](https://openasst.ai)** &nbsp;•&nbsp; **📖 [Documentation](#quick-start)** &nbsp;•&nbsp; **💬 [Issues](https://github.com/abingyyds/OpenAsst/issues)**
+
+<br/>
+
+<img src="https://raw.githubusercontent.com/abingyyds/OpenAsst/main/docs/demo.gif" alt="OpenAsst Demo" width="700"/>
+
+</div>
+
+<br/>
+
+## ✨ Overview
+
+> **OpenAsst** is an intelligent terminal assistant that lets you manage servers and execute system tasks using **natural language**.
+
+<table>
+<tr>
+<td width="50%">
+
+### 🖥️ CLI Tool (Core)
+A powerful command-line tool for AI-driven system operations
+- Natural language task execution
+- Multi-server cluster control
+- API sharing with dev tools
+
+</td>
+<td width="50%">
+
+### 🌐 Web Dashboard
+Visual interface at **[OpenAsst.Ai](https://openasst.ai)**
+- Server management GUI
+- Batch AI execution
+- Real-time terminal streaming
+
+</td>
+</tr>
+</table>
 
 ---
 
-## Overview
+## 🚀 Quick Start
 
-OpenAsst is an intelligent terminal assistant that lets you manage servers and execute system tasks using natural language. The project consists of two parts:
+### One-Line Installation
 
-- **CLI Tool** (Core) - A powerful command-line tool for AI-driven system operations
-- **Web Dashboard** (Optional) - A visual interface for users who prefer GUI
-
----
-
-## Quick Start
-
-### CLI Installation (Recommended)
-
-**macOS / Linux:**
+<table>
+<tr>
+<td><b>macOS / Linux</b></td>
+<td>
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
 ```
 
-**Windows (PowerShell):**
+</td>
+</tr>
+<tr>
+<td><b>Windows (PowerShell)</b></td>
+<td>
 
 ```powershell
 iwr -useb https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.ps1 | iex
 ```
 
-**Windows (CMD):**
+</td>
+</tr>
+</table>
 
-```cmd
-curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.bat -o install.bat && install.bat
-```
-
-**Configure:**
+### Configure & Use
 
 ```bash
+# Configure your API key
 openasst config
-```
 
-**Start using:**
-
-```bash
+# Start using with natural language!
 openasst do "install nginx and configure it for port 8080"
 ```
 
 ---
 
-## CLI Features
+## 🎯 CLI Features
 
 | Feature | Description |
-|---------|-------------|
-| 🎛️ **Cluster Control** | Manage and execute commands on multiple servers simultaneously |
+|:--------|:------------|
+| 🎛️ **Cluster Control** | Manage multiple servers simultaneously |
 | 🤖 **Smart Task Engine** | Execute any task using natural language |
 | 🔧 **Auto Error Recovery** | Intelligent error detection and auto-fixing |
 | 🔒 **Security Guard** | Built-in protection against dangerous commands |
@@ -71,13 +104,12 @@ openasst do "install nginx and configure it for port 8080"
 | 🧩 **Skill System** | Extensible skills for Git, Docker, System ops |
 | ⏰ **Scheduled Tasks** | Create timers and automated jobs |
 | 🚀 **Auto Deployment** | Deploy from Git repos or documentation |
-| 📊 **Service Management** | Manage background services |
-| 👁️ **Monitoring** | Monitor services with auto-restart |
-| 🌍 **Cross-platform** | macOS, Linux, Windows |
 
-### Smart Task Engine
+---
 
-The core of OpenAsst - execute any task with natural language:
+## 💡 Smart Task Engine
+
+Execute any task with natural language:
 
 ```bash
 # Install software
@@ -93,7 +125,9 @@ openasst do "create a new React project with TypeScript"
 openasst do "update all npm packages" -y
 ```
 
-### Deploy from Documentation
+---
+
+## 📦 Deploy from Documentation
 
 ```bash
 # From URL
@@ -106,30 +140,25 @@ openasst deploy ./INSTALL.md
 openasst auto https://github.com/user/repo.git
 ```
 
-### API Sharing
+---
+
+## 🔗 API Sharing
 
 Share your AI API with other development tools:
 
 ```bash
-# Share with Claude Code
-openasst api share claude-code
-
-# Share with Cursor
-openasst api share cursor
-
-# Share with all supported tools
-openasst api share
+openasst api share claude-code   # Claude Code
+openasst api share cursor        # Cursor
+openasst api share               # All tools
 ```
 
-**Supported Tools:** Claude Code, Cursor, Continue, Aider
+**Supported:** Claude Code, Cursor, Continue, Aider
 
 ---
 
-## Cluster Control
+## 🎛️ Cluster Control
 
-OpenAsst's powerful cluster control feature lets you manage multiple servers from a single command line.
-
-### Architecture
+Manage multiple servers from a single command line.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -138,175 +167,62 @@ OpenAsst's powerful cluster control feature lets you manage multiple servers fro
 │  │ CLI      │  │ WSHub    │  │ DeviceManager│  │
 │  └──────────┘  └──────────┘  └──────────────┘  │
 └─────────────────────┬───────────────────────────┘
-                      │ WebSocket (Port 9527)
+                      │ WebSocket
        ┌──────────────┼──────────────┐
        ▼              ▼              ▼
  ┌──────────┐  ┌──────────┐  ┌──────────┐
- │ Agent 1  │  │ Agent 2  │  │ Agent N  │
  │ Server A │  │ Server B │  │ Server C │
  └──────────┘  └──────────┘  └──────────┘
 ```
 
-### Quick Start - Cluster
-
 ```bash
-# 1. Add devices
+# Add devices
 openasst devices add
 
-# 2. Start the hub
-openasst hub start
-
-# 3. Deploy agents to servers
-openasst agent deploy --all
-
-# 4. Execute commands on all servers
+# Execute on all servers
 openasst run "uname -a" --all
-```
 
-### Batch Execution
-
-```bash
-# Execute on all devices
-openasst run "command" --all
-
-# Execute on devices with specific tags
-openasst run "command" --tags web,production
-
-# Execute on specific devices
-openasst run "command" --devices server1,server2
-
-# Execute on a group
-openasst run "command" --group frontend
-```
-
-### Natural Language Cluster Control
-
-Execute AI tasks on multiple servers using natural language:
-
-```bash
-# Install nginx on all servers
+# AI tasks on cluster
 openasst do "install nginx" --all
-
-# Update packages on servers with specific tags
-openasst do "update all system packages" --tags production -y
-
-# Deploy to a group
-openasst do "pull latest code and restart" --group frontend
 ```
-
-### API Sync to Remote Devices
-
-Sync API configuration to remote servers:
-
-```bash
-# Sync to all devices
-openasst api sync --all
-
-# Sync to specific devices
-openasst api sync --devices server1,server2
-```
-
-### Cluster Commands
-
-| Command | Description |
-|---------|-------------|
-| `openasst devices list` | List all devices |
-| `openasst devices add` | Add a new device |
-| `openasst devices remove <name>` | Remove a device |
-| `openasst hub start` | Start WebSocket hub |
-| `openasst hub status` | Show hub status |
-| `openasst run <cmd> --all` | Execute on all devices |
-| `openasst agent deploy --all` | Deploy agent to devices |
-| `openasst agent status` | Show agent status |
-
-### Interactive Assistant
-
-```bash
-openasst assistant
-```
-
-### All CLI Commands
-
-| Command | Description |
-|---------|-------------|
-| `openasst do <task>` | Execute task with natural language |
-| `openasst assistant` | Interactive assistant mode |
-| `openasst config` | Configure API settings |
-| `openasst deploy <source>` | Deploy from documentation |
-| `openasst auto <source>` | Auto deploy from Git |
-| `openasst api share` | Share API with other tools |
-| `openasst devices list` | List all cluster devices |
-| `openasst devices add` | Add a new device |
-| `openasst hub start` | Start WebSocket hub |
-| `openasst run <cmd> --all` | Execute on all devices |
-| `openasst agent deploy --all` | Deploy agent to devices |
-| `openasst skill list` | List installed skills |
-| `openasst schedule list` | List scheduled tasks |
-| `openasst service list` | List background services |
-| `openasst monitor start` | Start monitoring |
 
 ---
 
-## Web Dashboard
+## 🌐 Web Dashboard
 
-The Web Dashboard provides a visual interface for managing remote servers. It's optional but useful for users who prefer GUI over terminal.
+> **Live Demo: [OpenAsst.Ai](https://openasst.ai)**
 
-### Features
+| Feature | Description |
+|:--------|:------------|
+| 🖥️ **Server Management** | Add and manage multiple SSH servers |
+| 🎛️ **Batch Control** | Execute AI tasks on multiple servers |
+| 🤖 **Terminal Agent** | Deploy CLI agent on remote servers |
+| 📜 **Script Marketplace** | Share and use command templates |
+| ⚡ **Real-time Streaming** | Live command output in browser |
 
-- 🖥️ **Server Management** - Add and manage multiple servers (SSH)
-- 🎛️ **Batch Control** - Execute AI tasks on multiple servers simultaneously
-- 🤖 **OpenAsst Terminal Agent** - Deploy and use CLI agent on remote servers
-- 📜 **Script Marketplace** - Share and use command templates
-- 💬 **AI Assistant** - Chat with AI for server management help
-- ⚡ **Real-time Execution** - Stream command output in browser
-- 🔄 **One-click CLI Install** - Install CLI on servers via AI
-- 🔒 **User Isolation** - Secure multi-user environment
+---
 
-### Web Dashboard Setup
-
-**Prerequisites:**
-- Node.js 18+
-- Anthropic API Key
-- Supabase Project (for authentication)
-
-**Install & Run:**
+### Self-Hosted Setup
 
 ```bash
-# Clone repository
+# Clone & Install
 git clone https://github.com/abingyyds/OpenAsst.git
-cd OpenAsst
-
-# Install backend dependencies
-npm install
-
-# Install frontend dependencies
+cd OpenAsst && npm install
 cd frontend && npm install && cd ..
 
-# Configure environment variables
+# Configure .env files
 cp .env.example .env
-# Edit .env with your API keys
 
-# Start backend (Terminal 1)
-npm run dev
-
-# Start frontend (Terminal 2)
-cd frontend && npm run dev
+# Run
+npm run dev          # Backend
+cd frontend && npm run dev  # Frontend
 ```
-
-**Access:** Open `http://localhost:3000` in your browser
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
-### CLI Configuration
-
-```bash
-openasst config
-```
-
-Or manually create `~/.openasst-cli/config.json`:
-
+**CLI:** `~/.openasst-cli/config.json`
 ```json
 {
   "apiKey": "your-anthropic-api-key",
@@ -315,77 +231,43 @@ Or manually create `~/.openasst-cli/config.json`:
 }
 ```
 
-### Web Dashboard Configuration
-
-**Backend (.env):**
-```bash
-ANTHROPIC_API_KEY=your_api_key
-ANTHROPIC_BASE_URL=https://api.anthropic.com
-PORT=3002
-```
-
-**Frontend (frontend/.env.local):**
-```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
-NEXT_PUBLIC_API_URL=http://localhost:3002
-```
-
 ---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 OpenAsst/
-├── cli/                    # CLI Tool (Core)
-│   ├── src/
-│   │   ├── core/
-│   │   │   ├── smart-task-engine.ts   # AI task execution
-│   │   │   ├── security-guard.ts      # Command safety check
-│   │   │   ├── error-handler.ts       # Auto error recovery
-│   │   │   └── ...
-│   │   ├── commands/       # CLI commands
-│   │   └── utils/          # Utilities
-│   └── package.json
-│
-├── src/                    # Web Backend
-│   ├── server.ts           # Express server
-│   ├── ssh-manager.ts      # SSH connections
-│   └── ...
-│
-├── frontend/               # Web Dashboard
-│   ├── app/                # Next.js pages
-│   ├── lib/                # API clients
-│   └── ...
-│
-└── install.sh              # macOS/Linux installer
-├── install.ps1             # Windows PowerShell installer
-└── install.bat             # Windows CMD installer
+├── cli/                # CLI Tool (Core)
+├── src/                # Web Backend
+├── frontend/           # Web Dashboard (Next.js)
+├── local-agent/        # Local Agent
+└── install.sh          # Installer
 ```
 
 ---
 
-## Security
-
-OpenAsst includes built-in security protection:
+## 🔒 Security
 
 - Blocks dangerous commands (`rm -rf /`, `mkfs`, etc.)
 - Warns about sudo operations
 - Requires confirmation for destructive actions
-- Sandboxed command execution
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit issues and pull requests.
+Contributions welcome! Please submit issues and pull requests.
 
-## License
+## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](LICENSE)
 
 ---
 
-<p align="center">
-  Made with ❤️ by OpenAsst Team
-</p>
+<div align="center">
+
+**[🌐 OpenAsst.Ai](https://openasst.ai)** &nbsp;•&nbsp; **[⭐ Star on GitHub](https://github.com/abingyyds/OpenAsst)**
+
+Made with ❤️ by OpenAsst Team
+
+</div>
