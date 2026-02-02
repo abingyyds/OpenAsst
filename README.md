@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🤖 OpenAsst
+<img src="docs/logo.png" alt="OpenAsst Logo" width="200"/>
+
+# OpenAsst
 
 ### AI-Powered Terminal Assistant for Natural Language System Operations
 
