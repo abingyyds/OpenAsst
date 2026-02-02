@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 
+// Polyfill fetch for Node.js 16 compatibility
+import fetch from 'node-fetch';
+if (!globalThis.fetch) {
+  (globalThis as any).fetch = fetch;
+}
+
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { configCommand } from './commands/config';
