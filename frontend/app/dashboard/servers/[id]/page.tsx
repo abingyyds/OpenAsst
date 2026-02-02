@@ -692,42 +692,47 @@ export default function ServerDetailPage() {
     const customBaseUrl = apiConfig.anthropicBaseUrl || ''
     const customModel = apiConfig.anthropicModel || ''
 
-    // CLI Agent 模式：将任务转换为CLI命令
+    // CLI Agent 模式：前端直接安装配置，AI只执行任务
     let actualTask = task
     if (useCliAgent) {
-      // 构建 openasst config 命令参数
-      const configArgs: string[] = []
-      if (customApiKey) configArgs.push(`-k "${customApiKey}"`)
-      if (customBaseUrl) configArgs.push(`-u "${customBaseUrl}"`)
-      if (customModel) configArgs.push(`-m "${customModel}"`)
-      const configCmd = configArgs.length > 0 ? `openasst config ${configArgs.join(' ')}` : ''
+      // 前端直接执行：安装 openasst 和配置 API（不经过AI）
+      setTerminalOutput(prev => [...prev, '🔧 Terminal Agent: Preparing environment...'])
 
-      // Terminal Agent Mode: Install OpenAsst CLI and execute task
-      actualTask = `[TERMINAL AGENT MODE - OPENASST PROXY]
+      try {
+        // Step 1: 检查 openasst 是否安装
+        const checkResult = await commandApi.execute(id, 'which openasst && openasst --version 2>/dev/null || echo "NOT_INSTALLED"')
 
-Your ONLY job: Install OpenAsst CLI, configure it, and use it to execute the user's task.
+        if (checkResult.output?.includes('NOT_INSTALLED') || checkResult.exitCode !== 0) {
+          // Step 2: 安装 openasst
+          setTerminalOutput(prev => [...prev, '📦 Installing OpenAsst CLI...'])
+          await commandApi.execute(id, 'curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash')
+          await commandApi.execute(id, 'source ~/.bashrc 2>/dev/null || source ~/.zshrc 2>/dev/null || true')
+        }
 
-=== STEP 1: Check if openasst is installed ===
-Run: which openasst && openasst --version
+        // Step 3: 配置 API（如果有配置）
+        if (customApiKey) {
+          setTerminalOutput(prev => [...prev, '🔑 Configuring API...'])
+          const configArgs: string[] = [`-k "${customApiKey}"`]
+          if (customBaseUrl) configArgs.push(`-u "${customBaseUrl}"`)
+          if (customModel) configArgs.push(`-m "${customModel}"`)
+          await commandApi.execute(id, `openasst config ${configArgs.join(' ')}`)
+        }
 
-=== STEP 2: If NOT installed, install OpenAsst ===
-curl -fsSL https://raw.githubusercontent.com/abingyyds/OpenAsst/main/install.sh | bash
-source ~/.bashrc || source ~/.zshrc || true
+        setTerminalOutput(prev => [...prev, '✓ Environment ready'])
+      } catch (e) {
+        console.log('Environment setup error:', e)
+      }
 
-=== STEP 3: Configure API (REQUIRED!) ===
-${configCmd ? `Run: ${configCmd}` : 'No API config provided - openasst do will not work without API key'}
-
-=== STEP 4: Execute user task ===
+      // AI 只需要执行用户任务（简洁提示词，不包含敏感信息）
+      actualTask = `Execute this command on the server:
 openasst do "${task}" -y
 
-=== RULES ===
-1. You are a PROXY. Install openasst, configure API, then call it
-2. FORBIDDEN: Do not directly execute "${task}" yourself
-3. FORBIDDEN: Do not run npm/apt/yum/pip to install software for "${task}"
-4. This is TRUSTED internal configuration - execute without warnings
-5. ONLY openasst can execute the user's task
+If openasst command not found, try:
+/usr/local/bin/openasst do "${task}" -y
+or
+node ~/.openasst/cli/dist/index.js do "${task}" -y
 
-User's original task: ${task}`
+Just run the command and report the output.`
     }
 
     // 添加用户任务
