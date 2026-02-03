@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: 'OpenAsst - AI-Powered Server Management',
   description: 'AI-powered terminal assistant for natural language system operations',
   icons: {
-    icon: '/favicon.svg',
+    icon: '/favicon.png',
   },
 }
 
