@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-02-02T09:02:04.696Z",
+  "lastUpdated": "2026-02-03T02:58:38.497Z",
   "categories": [
     {
       "id": "custom",
@@ -11,10 +11,16 @@
       "id": "deployment",
       "name": "deployment",
       "description": "deployment knowledge"
+    },
+    {
+      "id": "github-readme",
+      "name": "github-readme",
+      "description": "github-readme knowledge"
     }
   ],
   "files": [
     "custom.json",
-    "deployment.json"
+    "deployment.json",
+    "github-readme.json"
   ]
 }
