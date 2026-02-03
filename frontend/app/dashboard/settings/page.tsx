@@ -181,6 +181,20 @@ export default function SettingsPage() {
 
         <div>
           <h2 className="text-xl font-semibold mb-4 text-green-400 font-mono"># Anthropic API</h2>
+          {/* Ad Banner */}
+          <div className="mb-4 p-3 bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-lg">
+            <p className="text-xs font-mono text-purple-300">
+              <span className="text-yellow-400">*</span> Need cheap Claude Code Opus 4.5 API? Visit{' '}
+              <a
+                href="https://cCoder.me"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline"
+              >
+                cCoder.me
+              </a>
+            </p>
+          </div>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-mono text-green-500 mb-2">api_key:</label>
