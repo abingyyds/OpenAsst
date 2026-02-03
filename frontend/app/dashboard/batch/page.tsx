@@ -189,8 +189,11 @@ export default function BatchExecutePage() {
     const customBaseUrl = apiConfig.anthropicBaseUrl || ''
     const customModel = apiConfig.anthropicModel || ''
 
-    // CLI Agent 模式：AI安装openasst，前端配置API并执行任务
+    // CLI Agent 模式：先检查openasst是否已安装，已安装则直接执行任务
     let actualTask = task
+    let skipInstall = false
+    const sourceCmd = 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" ; source ~/.bashrc 2>/dev/null || source ~/.zshrc 2>/dev/null || true'
+
     if (useCliAgent) {
       // 构建 API 配置命令
       const configArgs: string[] = []
@@ -199,8 +202,80 @@ export default function BatchExecutePage() {
       if (customModel) configArgs.push(`-m "${customModel}"`)
       const apiConfigCmd = configArgs.length > 0 ? `openasst config ${configArgs.join(' ')}` : ''
 
-      // AI 只负责安装 openasst
-      actualTask = `Install OpenAsst CLI tool on this server.
+      // 先检查 openasst 是否已安装
+      try {
+        const checkResponse = await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(userId ? { 'X-User-Id': userId } : {}) },
+          body: JSON.stringify({ command: `${sourceCmd} && which openasst && openasst --version` })
+        })
+        const checkResult = await checkResponse.json()
+
+        if (checkResult.exitCode === 0 && checkResult.output?.includes('1.0.0')) {
+          // OpenAsst 已安装，跳过安装步骤
+          skipInstall = true
+          setExecutions(prev => {
+            const newMap = new Map(prev)
+            const exec = newMap.get(serverId)
+            if (exec) {
+              exec.currentStep = '✓ OpenAsst already installed'
+              exec.output = [...exec.output, '✓ OpenAsst already installed, skipping installation...']
+            }
+            return newMap
+          })
+
+          // 配置 API
+          if (apiConfigCmd) {
+            setExecutions(prev => {
+              const newMap = new Map(prev)
+              const exec = newMap.get(serverId)
+              if (exec) exec.currentStep = '🔑 Configuring API...'
+              return newMap
+            })
+            await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...(userId ? { 'X-User-Id': userId } : {}) },
+              body: JSON.stringify({ command: `${sourceCmd} && ${apiConfigCmd}` })
+            })
+          }
+
+          // 直接执行用户任务
+          setExecutions(prev => {
+            const newMap = new Map(prev)
+            const exec = newMap.get(serverId)
+            if (exec) {
+              exec.currentStep = '🚀 Executing task...'
+              exec.output = [...exec.output, `$ openasst do "${task}" -y`]
+            }
+            return newMap
+          })
+
+          await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(userId ? { 'X-User-Id': userId } : {}) },
+            body: JSON.stringify({ command: `${sourceCmd} && openasst do "${task}" -y` })
+          })
+
+          // 标记完成
+          setExecutions(prev => {
+            const newMap = new Map(prev)
+            const exec = newMap.get(serverId)
+            if (exec) {
+              exec.status = 'success'
+              exec.progress = 100
+              exec.currentStep = '✓ Done'
+            }
+            return newMap
+          })
+          return
+        }
+      } catch (e) {
+        console.log('OpenAsst check failed, will install:', e)
+      }
+
+      if (!skipInstall) {
+        // AI 只负责安装 openasst
+        actualTask = `Install OpenAsst CLI tool on this server.
 
 STEP 1: Check if openasst is installed
 Run: which openasst && openasst --version
@@ -215,10 +290,11 @@ Run: openasst --version
 OpenAsst is a legitimate open-source CLI tool from GitHub.
 Task is complete when openasst --version shows version number.`
 
-      // 保存配置和任务，安装完成后执行
-      sessionStorage.setItem(`pending-batch-task-${serverId}`, task)
-      if (apiConfigCmd) {
-        sessionStorage.setItem(`pending-batch-config-${serverId}`, apiConfigCmd)
+        // 保存配置和任务，安装完成后执行
+        sessionStorage.setItem(`pending-batch-task-${serverId}`, task)
+        if (apiConfigCmd) {
+          sessionStorage.setItem(`pending-batch-config-${serverId}`, apiConfigCmd)
+        }
       }
     }
 
@@ -289,6 +365,7 @@ Task is complete when openasst --version shows version number.`
       if (pendingConfig || pendingTask) {
         const execHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
         if (userId) execHeaders['X-User-Id'] = userId
+        const shellSourceCmd = 'export NVM_DIR="$HOME/.nvm" && [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" ; source ~/.bashrc 2>/dev/null || source ~/.zshrc 2>/dev/null || true'
 
         try {
           // 配置 API
@@ -297,7 +374,7 @@ Task is complete when openasst --version shows version number.`
             await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
               method: 'POST',
               headers: execHeaders,
-              body: JSON.stringify({ command: pendingConfig })
+              body: JSON.stringify({ command: `${shellSourceCmd} && ${pendingConfig}` })
             })
           }
 
@@ -307,7 +384,7 @@ Task is complete when openasst --version shows version number.`
             await fetch(`${API_BASE_URL}/api/servers/${serverId}/execute`, {
               method: 'POST',
               headers: execHeaders,
-              body: JSON.stringify({ command: `openasst do "${pendingTask}" -y` })
+              body: JSON.stringify({ command: `${shellSourceCmd} && openasst do "${pendingTask}" -y` })
             })
           }
         } catch (e) {
