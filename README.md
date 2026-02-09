@@ -44,7 +44,7 @@ A powerful command-line tool for AI-driven system operations
 <td width="50%">
 
 ### 🌐 Web Dashboard
-Visual interface at **[OpenAsst.Ai](https://openasst.ai)**
+Visual interface at **[OpenAsst.Ai](https://v1.openasst.ai)**
 - Server management GUI
 - Batch AI execution
 - Real-time terminal streaming
