@@ -21,7 +21,7 @@
     "@anthropic-ai/sdk": "^0.72.0",
     "@supabase/supabase-js": "^2.39.0",
     "@types/dockerode": "^4.0.1",
-    "axios": "^1.13.4",
+    "axios": "^1.13.5",
     "cors": "^2.8.5",
     "dockerode": "^4.0.9",
     "dotenv": "^16.6.0",
